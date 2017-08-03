@@ -19,9 +19,9 @@ def get_decoded_token(token, secret_key=None, leeway=0):
         jwt_payload = jwt.decode(token, secret_key, leeway=leeway)
 
     except jwt.exceptions.ExpiredSignatureError:
-        raise ExpiredTokenError(message='need reauthentication, expired JWT token {}'.format(token), reason='expired')
+        raise ExpiredTokenError(message='need reauthentication, expired JWT token {}'.format(token))
     except jwt.exceptions.DecodeError:
-        raise BrokenTokenError(message='validation failed on JWT token {}'.format(token), reason='decode')
+        raise BrokenTokenError(message='validation failed on JWT token {}'.format(token))
 
     return jwt_payload
 
@@ -77,9 +77,8 @@ class AuthSecretKeyNotSet(Exception):
 
 
 class BaseTokenError(Exception):
-    def __init__(self, message=None, reason='unknown'):
+    def __init__(self, message=None):
         self.message = str(message)
-        self.reason = reason
 
 
 class BrokenTokenError(BaseTokenError):
