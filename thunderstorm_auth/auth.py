@@ -41,10 +41,7 @@ def decode_token(token):
     if auth_secret_key is None:
         raise AuthSecretKeyNotSet('flask app has not got TS_AUTH_SECRET_KEY set in the config')
 
-    try:
-        return get_decoded_token(token, auth_secret_key, leeway)
-    except BaseTokenError as e:
-        raise AuthFlaskError(message=e.message) from e
+    return get_decoded_token(token, auth_secret_key, leeway)
 
 
 def ts_auth_required(func):
@@ -56,12 +53,11 @@ def ts_auth_required(func):
         token = request.headers.get('X-Thunderstorm-Key')
 
         try:
-            if any([token is None, decode_token(token) is None]):
-                raise AuthFlaskError(message='No token available')
+            decode_token(token)
 
-        except AuthFlaskError as e:
+        except BaseTokenError as e:
             current_app.logger.error(e.message)
-            return jsonify(message=e.message), e.code
+            return jsonify(message=e.message), 401
         else:
             return func(*args, **kwargs)
 
@@ -87,9 +83,3 @@ class BrokenTokenError(BaseTokenError):
 
 class ExpiredTokenError(BaseTokenError):
     pass
-
-
-class AuthFlaskError(Exception):
-    def __init__(self, message='Unauthorized', code=401):
-        self.message = str(message)
-        self.code = code
