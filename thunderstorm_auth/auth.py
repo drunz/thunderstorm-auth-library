@@ -19,9 +19,9 @@ def get_decoded_token(token, secret_key=None, leeway=0):
         jwt_payload = jwt.decode(token, secret_key, leeway=leeway)
 
     except jwt.exceptions.ExpiredSignatureError:
-        raise ExpiredTokenError('need reauthentication, expired JWT token {}'.format(token))
+        raise ExpiredTokenError('Auth token expired. Please retry with a new token.')
     except jwt.exceptions.DecodeError:
-        raise BrokenTokenError('validation failed on JWT token {}'.format(token))
+        raise BrokenTokenError('Token authentication failed.')
 
     return jwt_payload
 
@@ -39,14 +39,17 @@ def decode_token(token):
     leeway = current_app.config.get('TS_AUTH_LEEWAY', 0)
 
     if auth_secret_key is None:
-        raise AuthSecretKeyNotSet('flask app has not got TS_AUTH_SECRET_KEY set in the config')
+        raise AuthSecretKeyNotSet('TS_AUTH_SECRET_KEY missing from Flask config')
 
     return get_decoded_token(token, auth_secret_key, leeway)
 
 
 def ts_auth_required(func):
     """
-    Flask decorator to check the authentication token <thunderstorm-key>
+    Flask decorator to check the authentication token X-Thunderstorm-Key
+
+    If token decode fails for any reason, an an error is logged and a 401 Unauthorized
+    is returned to the caller.
     """
     @wraps(func)
     def decorated_function(*args, **kwargs):
