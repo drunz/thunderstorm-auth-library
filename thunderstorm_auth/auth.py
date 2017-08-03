@@ -17,6 +17,7 @@ def get_decoded_token(token, secret_key=None, leeway=0):
     """
     try:
         jwt_payload = jwt.decode(token, secret_key, leeway=leeway)
+
     except jwt.exceptions.ExpiredSignatureError:
         raise ExpiredTokenError(message='need reauthentication, expired JWT token {}'.format(token), reason='expired')
     except jwt.exceptions.DecodeError:
@@ -36,6 +37,7 @@ def decode_token(token):
     """
     auth_secret_key = current_app.config.get('TS_AUTH_SECRET_KEY')
     leeway = current_app.config.get('TS_AUTH_LEEWAY', 0)
+
     if auth_secret_key is None:
         raise AuthSecretKeyNotSet('flask app has not got TS_AUTH_SECRET_KEY set in the config')
 
@@ -52,14 +54,17 @@ def ts_auth_required(func):
     @wraps(func)
     def decorated_function(*args, **kwargs):
         token = request.headers.get('X-Thunderstorm-Key')
+
         try:
             if any([token is None, decode_token(token) is None]):
                 raise AuthFlaskError(message='No token available')
+
         except AuthFlaskError as e:
             current_app.logger.error(e.message)
             return jsonify(message=e.message), e.code
         else:
             return func(*args, **kwargs)
+
     return decorated_function
 
 
