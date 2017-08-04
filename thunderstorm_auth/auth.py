@@ -55,6 +55,9 @@ def ts_auth_required(func):
     def decorated_function(*args, **kwargs):
         token = request.headers.get('X-Thunderstorm-Key')
 
+        if token is None:
+            return jsonify(message='Missing X-Thunderstorm-Key header'), 401
+
         try:
             decode_token(token)
 

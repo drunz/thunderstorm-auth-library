@@ -47,6 +47,12 @@ def test_endpoint_returns_401_with_invalid_token(token, flask_app):
     assert response.status_code == 401
 
 
+def test_endpoint_returns_401_with_missing_token(flask_app):
+    response = flask_app.test_client().get('/')
+
+    assert response.status_code == 401
+
+
 def test_endpoint_returns_500_if_no_secret_key_set(valid_token, flask_app):
     with flask_app.app_context():
         flask_app.config['TS_AUTH_SECRET_KEY'] = None
