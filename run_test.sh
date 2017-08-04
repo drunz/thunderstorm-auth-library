@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# This script is used by docker-compose to run tests against different python versions
 
 echo "Install package"
 pip install -e .

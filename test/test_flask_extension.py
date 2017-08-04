@@ -1,7 +1,7 @@
 import pytest
 
 from conftest import invalid_token, expired_token
-from thunderstorm_auth.auth import decode_token, AuthFlaskError, AuthSecretKeyNotSet
+from thunderstorm_auth.auth import decode_token, BaseTokenError, AuthSecretKeyNotSet
 
 
 def test_decode_token_returns_if_jwt_valid(valid_token, flask_app):
@@ -18,13 +18,13 @@ def test_decode_token_raises_if_no_secret_key_set(invalid_token, flask_app):
 
 def test_decode_token_raises_if_jwt_invalid(invalid_token, flask_app):
     with flask_app.app_context():
-        with pytest.raises(AuthFlaskError):
+        with pytest.raises(BaseTokenError):
             decode_token(invalid_token)
 
 
 def test_decode_token_raises_if_jwt_expired(expired_token, flask_app):
     with flask_app.app_context():
-        with pytest.raises(AuthFlaskError):
+        with pytest.raises(BaseTokenError):
             decode_token(expired_token)
 
 
@@ -43,6 +43,12 @@ def test_endpoint_returns_200_with_proper_token(valid_token, flask_app):
 @pytest.mark.parametrize('token,', [invalid_token, expired_token, None])
 def test_endpoint_returns_401_with_invalid_token(token, flask_app):
     response = flask_app.test_client().get('/', headers={'X-Thunderstorm-Key': token})
+
+    assert response.status_code == 401
+
+
+def test_endpoint_returns_401_with_missing_token(flask_app):
+    response = flask_app.test_client().get('/')
 
     assert response.status_code == 401
 
