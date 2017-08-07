@@ -25,4 +25,4 @@ release: dist
 		--repo thunderstorm-auth-library \
 		--tag v$$(python setup.py --version) \
 		--name thunderstorm-auth-lib-$$(python setup.py --version).tar.gz \
-		--file thunderstorm-auth-lib-$$(python setup.py --version).tar.gz
+		--file dist/thunderstorm-auth-lib-$$(python setup.py --version).tar.gz
