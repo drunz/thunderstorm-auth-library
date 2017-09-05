@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-node('aamprod-ecr-tf9-slave') {
+node('aam-identity-prodcd') {
     properties([
         [
             $class: 'HudsonNotificationProperty',
