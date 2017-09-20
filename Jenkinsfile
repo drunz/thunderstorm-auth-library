@@ -38,5 +38,7 @@ node('aam-identity-prodcd') {
         junit 'results.xml'
         error 'Thunderstorm Client Staging build failed ${err}'
 
+    } finally {
+        sh 'docker-compose down'
     }
 }
