@@ -55,7 +55,7 @@ def expose_pks():
     pk_name = _datastore.model_pk_name
     return jsonify(
         {
-            _datastore.model.__class__.__name__: {
+            _datastore.model.__name__.lower(): {
                 pk_name: [_datastore.get_pks()],
             },
             'page': PAGE,

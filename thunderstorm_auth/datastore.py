@@ -43,10 +43,17 @@ class Datastore(object):
         Helper method to return paginated pk values of the model
 
         # TODO @shipperizer add model as a parameter so can be useable for multiple mappings
+
+        Return:
+            List of pks (list): eg ["dd4e5cb3-4809-4098-8204-5c5fc3f55683", "e833d552-2c43-4f29-be41-25d4c4daec87",
+                                      "20409d97-c63b-4e60-9468-714b7753194b"]
         """
-        return self.db_session.query(
+        records = self.db_session.query(
             getattr(self.model, self.model_pk_name)
-        ).offset((page - 1) * page_size).limit(page_size)
+        ).offset((page - 1) * page_size).limit(page_size).all()
+
+        # records is a list of lists, each containing just the pk of the record
+        return [record[0] for record in records]
 
     def associate(self, data, *args, **kwargs):
         """
