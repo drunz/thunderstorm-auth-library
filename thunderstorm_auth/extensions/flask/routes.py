@@ -1,4 +1,5 @@
-from flask import Blueprint, jsonify, current_app
+from flask import Blueprint, jsonify, current_app, url_for, request
+from marshmallow import fields, Schema
 from werkzeug.local import LocalProxy
 
 
@@ -12,6 +13,34 @@ _datastore = LocalProxy(lambda: _TsAuth.datastore)
 
 
 auth_api_bp = Blueprint('ts_auth', __name__, url_prefix='/api/auth/v0')
+
+
+class TsAuthGroupSchema(Schema):
+    """
+    Schema for TsAuthGroup model
+
+    resource will be a link to the detailed view of the specific group
+    """
+    uuid = fields.UUID(required=True)
+    name = fields.String(required=True)
+    resource = fields.Method("resource_url")
+
+    def resource_url(self, obj):
+        return url_for('ts_auth.group_detail', uuid=obj.uuid)
+
+
+# class TsAuthGroupMatchSchema(Schema):
+#     """
+#     Schema for TsAuthGroup model on the associate/match endpoint
+#
+#     resource will be a link to the detailed view of the specific group
+#     """
+#     uuid = fields.UUID(required=True)
+#     name = fields.String(required=True)
+#     resource = fields.Method("resource_url")
+#
+#     def resource_url(self, obj):
+#         return url_for('ts_auth.group_detail', uuid=obj.uuid)
 
 
 # starting with a single model to be exposable per service
@@ -35,12 +64,43 @@ def expose_pks():
     )
 
 
-@auth_api_bp.route('/groups', methods=['PUT'])
+@auth_api_bp.route('/group', methods=['GET'])
+def groups():
+    """
+    Endpoint used by the Auth service to check the groups present/mapped
+    """
+    # TODO @shipperizer add pagination
+    groups = _datastore.get_groups()
+    return jsonify(data=TsAuthGroupSchema(many=True).dump(groups).data)
+
+
+@auth_api_bp.route('/group/<uuid:uuid>', methods=['GET'])
+def group_detail(uuid):
+    """
+    Endpoint used by the Auth service to check the groups present/mapped
+    """
+    group = _datastore.get_group(uuid)
+
+    if not group:
+        return jsonify(), 404
+    return jsonify(TsAuthGroupSchema(only=('uuid', 'name')).dump(group).data)
+
+
+@auth_api_bp.route('/group', methods=['PUT'])
 def associate_group():
     """
     Endpoint used by the Auth service to push associations between group and models pks
 
     Using PUT as we need an UPSERT, create if not present otherwise update group
-    """
 
+    Payload:
+        data (dict): payload expected in a form of
+            {
+             <group_a>: {'complex_uuids': [<model_1>, <model_7>], 'name': <name_a>}
+             <group_b>: {'complex_uuids': [<model_1>, <model_3>, ..], 'name': <name_b>}
+            }
+    """
+    # TODO @shipperizer fidn a way to introduce the Marshmallow schema
+    data = request.get_json(force=True, silent=True)
+    _datastore.associate(data)
     return jsonify(), 204
