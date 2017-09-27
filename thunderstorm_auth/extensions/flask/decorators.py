@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import current_app, jsonify, request
+from flask import current_app, jsonify, request, g
 
 from thunderstorm_auth.auth import get_decoded_token
 from thunderstorm_auth.exceptions import BaseTokenError, AuthSecretKeyNotSet
@@ -11,6 +11,7 @@ def decode_token(token):
     Helper for the flask decorator
     wraps get_decoded_token exceptions in flask-type errors
     """
+    # TODO @shipperizer move this to use the flask extension with the LocalProxy
     auth_secret_key = current_app.config.get('TS_AUTH_SECRET_KEY')
     leeway = current_app.config.get('TS_AUTH_LEEWAY', 0)
 
@@ -35,7 +36,8 @@ def ts_auth_required(func):
             return jsonify(message='Missing X-Thunderstorm-Key header'), 401
 
         try:
-            decode_token(token)
+            # store decoded token on request-bounded context g
+            g.token = decode_token(token)
 
         except BaseTokenError as e:
             current_app.logger.error(e)
