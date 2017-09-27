@@ -48,15 +48,17 @@ class TsAuthGroupSchema(Schema):
 def expose_pks():
     """
     Endpoint to expose the model and respective pks
-
+    """
     # TODO @shipperizer add pagination
     # TODO @shipperizer make it able to handle multiple models (different endpoints /models/<modelA>)
-    """
+    # http://exploreflask.com/en/latest/views.html#custom-converters
     pk_name = _datastore.model_pk_name
     return jsonify(
         {
-            _datastore.model.__name__.lower(): {
-                pk_name: [_datastore.get_pks()],
+            'data': {
+                _datastore.model.__name__.lower(): {
+                    pk_name: [_datastore.get_pks()],
+                },
             },
             'page': PAGE,
             'page_size': PAGE_SIZE
