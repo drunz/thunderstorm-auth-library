@@ -5,16 +5,20 @@ from thunderstorm_auth.exceptions import ExpiredTokenError, BrokenTokenError
 
 
 def decode_token(token, secret_key, leeway=DEFAULT_LEEWAY):
-    """
-    JWT decoding method
+    """Decode and extract data from a JWT.
 
-    :params
-       token - :str token to decode
-       secret_key - :str shared secret key used to decode the token
-       leeway - :int amount of seconds of difference allowed to the
-                     expiration time
-    :raise BrokenTokenError, ExpiredTokenError
-    :return :dict payload stored in the token
+    Args:
+        token (str): Token data to decode.
+        secret_key (str): Shared secret key used to decode the token.
+        leeway (int): Number of seconds of lenience used in determining if a
+            token has expired.
+
+    Returns:
+         dict payload stored in the token
+
+    Raises:
+        ExpiredTokenError: If the token has expired.
+        BrokenTokenError: If the token is malformed.
     """
     try:
         return jwt.decode(

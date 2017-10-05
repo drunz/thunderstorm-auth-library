@@ -20,11 +20,13 @@ FLASK_LEEWAY = 'TS_AUTH_LEEWAY'
 
 
 def ts_auth_required(func):
-    """
-    Flask decorator to check the authentication token X-Thunderstorm-Key
+    """Flask decorator to check the authentication token X-Thunderstorm-Key
 
     If token decode fails for any reason, an an error is logged and a 401
     Unauthorized is returned to the caller.
+
+    Raises:
+        ThunderstormAuthError: If Flask is not installed.
     """
     if not HAS_FLASK:
         raise ThunderstormAuthError(
