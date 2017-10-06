@@ -3,26 +3,20 @@ from setuptools import find_packages, setup
 import thunderstorm_auth
 
 
-EXTENSIONS = (
-    'flask',
-    'falcon'
-)
-
-
-def _install_requirements():
-    return _read_requirements('requirements.txt')
-
-
-def _extras_requirements():
-    return {
-        extension: _read_requirements('requirements-{}.txt'.format(extension))
-        for extension in EXTENSIONS
-    }
-
-
 def _read_requirements(requirements_filename):
     with open(requirements_filename) as reqs_file:
         return reqs_file.readlines()
+
+
+REQUIREMENTS = _read_requirements('requirements.txt')
+EXTRA_REQS = {
+    'flask': [
+        'flask>=0.12,<0.13'
+    ],
+    'falcon': [
+        'falcon>=1.3,<1.4'
+    ]
+}
 
 
 setup(
@@ -30,6 +24,6 @@ setup(
     version=thunderstorm_auth.__version__,
     packages=find_packages(),
     include_package_data=True,
-    install_requires=_install_requirements(),
-    extras_require=_extras_requirements()
+    install_requires=REQUIREMENTS,
+    extras_require=EXTRA_REQS
 )
