@@ -16,7 +16,8 @@ components for those frameworks.
 
 e.g. for Flask:
 ```
-pip install https://github.com/artsalliancemedia/thunderstorm-auth-library/releases/download/v0.0.1/thunderstorm-auth-lib-0.0.1.tar.gz[flask]
+pip install https://github.com/artsalliancemedia/thunderstorm-auth-library/releases/download/vX.Y.Z/thunderstorm-auth-lib-X.Y.Z.tar.gz
+pip install thunderstorm-auth-lib[flask]
 ```
 
 
