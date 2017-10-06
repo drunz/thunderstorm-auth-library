@@ -2,23 +2,49 @@ from functools import wraps
 
 from flask import current_app, jsonify, request, g
 
-from thunderstorm_auth.auth import get_decoded_token
-from thunderstorm_auth.exceptions import BaseTokenError, AuthSecretKeyNotSet
+from thunderstorm_auth import TOKEN_HEADER, DEFAULT_LEEWAY
+from thunderstorm_auth.decoder import decode_token
+from thunderstorm_auth.exceptions import TokenError, AuthSecretKeyNotSet, TokenHeaderMissing
 
 
-def decode_token(token):
+FLASK_SECRET_KEY = 'TS_AUTH_SECRET_KEY'
+FLASK_LEEWAY = 'TS_AUTH_LEEWAY'
+
+
+def _decode_token(token):
     """
     Helper for the flask decorator
     wraps get_decoded_token exceptions in flask-type errors
     """
     # TODO @shipperizer move this to use the flask extension with the LocalProxy
-    auth_secret_key = current_app.config.get('TS_AUTH_SECRET_KEY')
-    leeway = current_app.config.get('TS_AUTH_LEEWAY', 0)
+    auth_secret_key = _get_secret_key()
+    leeway = current_app.config.get(FLASK_LEEWAY, DEFAULT_LEEWAY)
 
     if auth_secret_key is None:
         raise AuthSecretKeyNotSet('TS_AUTH_SECRET_KEY missing from Flask config')
 
-    return get_decoded_token(token, auth_secret_key, leeway)
+    return decode_token(token, auth_secret_key, leeway)
+
+
+def _get_token():
+    token = request.headers.get(TOKEN_HEADER)
+    if token is None:
+        raise TokenHeaderMissing()
+    return token
+
+
+def _get_secret_key():
+    try:
+        return current_app.config[FLASK_SECRET_KEY]
+    except KeyError:
+        raise AuthSecretKeyNotSet(
+            '{} missing from Flask config'.format(FLASK_SECRET_KEY)
+        )
+
+
+def _bad_token(error):
+    current_app.logger.error(error)
+    return jsonify(message=str(error)), 401
 
 
 def ts_auth_required(func):
@@ -30,18 +56,14 @@ def ts_auth_required(func):
     """
     @wraps(func)
     def decorated_function(*args, **kwargs):
-        token = request.headers.get('X-Thunderstorm-Key')
-
-        if token is None:
-            return jsonify(message='Missing X-Thunderstorm-Key header'), 401
-
+        token = token = _get_token()
         try:
             # store decoded token on request-bounded context g
-            g.token = decode_token(token)
+            g.token = _decode_token(token)
 
-        except BaseTokenError as e:
+        except TokenError as e:
             current_app.logger.error(e)
-            return jsonify(message=str(e)), 401
+            return _bad_token(e)
         else:
             return func(*args, **kwargs)
 
