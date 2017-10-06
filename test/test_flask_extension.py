@@ -1,50 +1,53 @@
 import pytest
 
-from conftest import invalid_token, expired_token
-from thunderstorm_auth.auth import decode_token, BaseTokenError, AuthSecretKeyNotSet
+from flask import Flask
+
+from thunderstorm_auth.flask import ts_auth_required
 
 
-def test_decode_token_returns_if_jwt_valid(valid_token, flask_app):
-    with flask_app.app_context():
-        assert decode_token(valid_token)
+@pytest.fixture
+def flask_app(secret_key):
+    app = Flask('test_app')
+    app.config['TS_AUTH_SECRET_KEY'] = secret_key
 
+    @app.route('/')
+    @ts_auth_required
+    def hello_world():
+        return 'Hello, World!'
 
-def test_decode_token_raises_if_no_secret_key_set(invalid_token, flask_app):
-    with flask_app.app_context():
-        flask_app.config['TS_AUTH_SECRET_KEY'] = None
-        with pytest.raises(AuthSecretKeyNotSet):
-            decode_token(invalid_token)
-
-
-def test_decode_token_raises_if_jwt_invalid(invalid_token, flask_app):
-    with flask_app.app_context():
-        with pytest.raises(BaseTokenError):
-            decode_token(invalid_token)
-
-
-def test_decode_token_raises_if_jwt_expired(expired_token, flask_app):
-    with flask_app.app_context():
-        with pytest.raises(BaseTokenError):
-            decode_token(expired_token)
-
-
-def test_decode_token_does_not_raise_if_jwt_expired_but_leeway_is_set(expired_token, flask_app):
-    with flask_app.app_context():
-        flask_app.config['TS_AUTH_LEEWAY'] = 3600
-        assert decode_token(expired_token)
+    return app
 
 
 def test_endpoint_returns_200_with_proper_token(valid_token, flask_app):
-    response = flask_app.test_client().get('/', headers={'X-Thunderstorm-Key': valid_token})
+    headers = {'X-Thunderstorm-Key': valid_token}
+    response = flask_app.test_client().get('/', headers=headers)
 
     assert response.status_code == 200
 
 
-@pytest.mark.parametrize('token,', [invalid_token, expired_token, None])
-def test_endpoint_returns_401_with_invalid_token(token, flask_app):
-    response = flask_app.test_client().get('/', headers={'X-Thunderstorm-Key': token})
+def test_endpoint_returns_401_with_invalid_token(invalid_token, flask_app):
+    headers = {'X-Thunderstorm-Key': invalid_token}
+    response = flask_app.test_client().get('/', headers=headers)
 
     assert response.status_code == 401
+
+
+def test_endpoint_returns_401_with_expired_token(expired_token, flask_app):
+    headers = {'X-Thunderstorm-Key': expired_token}
+    response = flask_app.test_client().get('/', headers=headers)
+
+    assert response.status_code == 401
+
+
+def test_endpoint_returns_200_when_expired_token_falls_within_leeway(
+        flask_app, expired_token):
+    with flask_app.app_context():
+        flask_app.config['TS_AUTH_LEEWAY'] = 3600
+        headers = {'X-Thunderstorm-Key': expired_token}
+
+        response = flask_app.test_client().get('/', headers=headers)
+
+        assert response.status_code == 200
 
 
 def test_endpoint_returns_401_with_missing_token(flask_app):
@@ -56,6 +59,8 @@ def test_endpoint_returns_401_with_missing_token(flask_app):
 def test_endpoint_returns_500_if_no_secret_key_set(valid_token, flask_app):
     with flask_app.app_context():
         flask_app.config['TS_AUTH_SECRET_KEY'] = None
-        response = flask_app.test_client().get('/', headers={'X-Thunderstorm-Key': valid_token})
+        headers = {'X-Thunderstorm-Key': valid_token}
+
+        response = flask_app.test_client().get('/', headers=headers)
 
         assert response.status_code == 500
