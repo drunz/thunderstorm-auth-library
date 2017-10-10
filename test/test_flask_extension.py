@@ -1,6 +1,6 @@
 import pytest
 
-from flask import Flask
+from flask import Flask, g
 
 from thunderstorm_auth.flask import ts_auth_required
 
@@ -23,6 +23,14 @@ def test_endpoint_returns_200_with_proper_token(valid_token, flask_app):
     response = flask_app.test_client().get('/', headers=headers)
 
     assert response.status_code == 200
+
+
+def test_decoded_token_added_to_g(valid_token, flask_app):
+    with flask_app.app_context():
+        headers = {'X-Thunderstorm-Key': valid_token}
+        flask_app.test_client().get('/', headers=headers)
+
+        assert g.token == {'data': {'more': 123}}
 
 
 def test_endpoint_returns_401_with_invalid_token(invalid_token, flask_app):
