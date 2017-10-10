@@ -13,3 +13,6 @@ dist/
 #pyenv
 .python-version
 
+.coverage
+coverage.xml
+results.xml

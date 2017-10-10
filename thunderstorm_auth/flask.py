@@ -1,5 +1,7 @@
 from functools import wraps
 
+from flask import g
+
 from thunderstorm_auth import TOKEN_HEADER, DEFAULT_LEEWAY
 from thunderstorm_auth.decoder import decode_token
 from thunderstorm_auth.exceptions import ThunderstormAuthError
@@ -36,7 +38,7 @@ def ts_auth_required(func):
     @wraps(func)
     def decorated_function(*args, **kwargs):
         try:
-            _decode_token()
+            g.token = _decode_token()
         except TokenError as error:
             return _bad_token(error)
         else:
