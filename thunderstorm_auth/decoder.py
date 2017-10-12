@@ -1,15 +1,17 @@
+import json
+
 import jwt
 
 from thunderstorm_auth import DEFAULT_LEEWAY
 from thunderstorm_auth.exceptions import ExpiredTokenError, BrokenTokenError
 
 
-def decode_token(token, secret_key, leeway=DEFAULT_LEEWAY):
+def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
     """Decode and extract data from a JWT.
 
     Args:
         token (str): Token data to decode.
-        secret_key (str): Shared secret key used to decode the token.
+        jwks (list): List of dicts (jwks) to be tried to decode the token.
         leeway (int): Number of seconds of lenience used in determining if a
             token has expired.
 
@@ -21,16 +23,57 @@ def decode_token(token, secret_key, leeway=DEFAULT_LEEWAY):
         BrokenTokenError: If the token is malformed.
     """
     try:
+        key_id = get_signing_key_id_from_jwt(token)
+
+        key_object = get_public_key_from_jwk(jwks[key_id])
+
         return jwt.decode(
             jwt=token,
-            key=secret_key,
-            leeway=leeway
+            key=key_object,
+            leeway=leeway,
+            algorithms=['RS512']
         )
+
     except jwt.exceptions.ExpiredSignatureError:
         raise ExpiredTokenError(
             'Auth token expired. Please retry with a new token.'
         )
-    except jwt.exceptions.DecodeError:
+    except jwt.exceptions.DecodeError as ex:
         raise BrokenTokenError(
-            'Token authentication failed.'
+            'Token authentication failed due to a malformed token or incorrect JWK.'
         )
+
+
+def get_public_key_from_jwk(jwk):
+    """
+    Create an _RSAPublicKey object using the contents of a JWK
+
+    Args:
+        JWK (dict): Contains information which represents a public key
+
+    Returns:
+        _RSAPublicKey
+    """
+    jwk_str = json.dumps(jwk)
+    return jwt.algorithms.RSAAlgorithm.from_jwk(jwk_str)
+
+
+def get_signing_key_id_from_jwt(token):
+    """
+    Match a token to a particular JWK based on kid (Key ID)
+
+    Args:
+        token (str): Signed token from the user service
+
+    Returns:
+        str: The kid of of the JWK used to sign the token.
+    """
+    # the outputs are payload, signing_input, header, signature
+    try:
+        token_contents = jwt.PyJWS()._load(token)
+    except jwt.exceptions.DecodeError:
+        raise
+
+    token_header = token_contents[2]
+
+    return token_header['kid']
