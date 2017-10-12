@@ -5,6 +5,10 @@ __pycache__
 venv/
 .cache
 
+.coverage
+coverage.xml
+results.xml
+
 build/
 dist/
 *.egg-info
