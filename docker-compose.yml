@@ -3,21 +3,21 @@ version: '3'
 services:
   python3.4:
     image: python:3.4-slim
-    command: /bin/bash run_test.sh
+    command: /bin/bash -c "apt-get update && apt-get -y --no-install-recommends install build-essential libffi-dev && apt-get clean && rm -rf /var/lib/apt/lists/* && /bin/bash run_test.sh"
     working_dir: /var/app
     volumes:
       - ./:/var/app
 
   python3.5:
     image: python:3.5-slim
-    command: /bin/bash run_test.sh
+    command: /bin/bash -c "apt-get update && apt-get -y --no-install-recommends install build-essential libffi-dev && apt-get clean && rm -rf /var/lib/apt/lists/* && /bin/bash run_test.sh"
     working_dir: /var/app
     volumes:
       - ./:/var/app
 
   python3.6:
     image: python:3.6-slim
-    command: /bin/bash run_test.sh
+    command: /bin/bash -c "apt-get update && apt-get -y --no-install-recommends install build-essential libffi-dev && apt-get clean && rm -rf /var/lib/apt/lists/* &&  /bin/bash run_test.sh"
     working_dir: /var/app
     volumes:
       - ./:/var/app
