@@ -4,9 +4,7 @@ from flask import g
 
 from thunderstorm_auth import TOKEN_HEADER, DEFAULT_LEEWAY
 from thunderstorm_auth.decoder import decode_token
-from thunderstorm_auth.exceptions import ThunderstormAuthError
-from thunderstorm_auth.exceptions import AuthSecretKeyNotSet
-from thunderstorm_auth.exceptions import TokenError, TokenHeaderMissing
+from thunderstorm_auth.exceptions import TokenError, TokenHeaderMissing, AuthJwksNotSet, ThunderstormAuthError
 
 try:
     from flask import current_app, jsonify, request
@@ -17,7 +15,7 @@ except ImportError:
 
 EXTENSION_KEY = 'ts_auth'
 
-FLASK_SECRET_KEY = 'TS_AUTH_SECRET_KEY'
+FLASK_JWKS = 'TS_AUTH_JWKS'
 FLASK_LEEWAY = 'TS_AUTH_LEEWAY'
 
 
@@ -49,9 +47,9 @@ def ts_auth_required(func):
 
 def _decode_token():
     token = _get_token()
-    secret_key = _get_secret_key()
+    jwks = _get_jwks()
     leeway = current_app.config.get(FLASK_LEEWAY, DEFAULT_LEEWAY)
-    return decode_token(token, secret_key, leeway)
+    return decode_token(token, jwks, leeway)
 
 
 def _get_token():
@@ -61,12 +59,12 @@ def _get_token():
     return token
 
 
-def _get_secret_key():
+def _get_jwks():
     try:
-        return current_app.config[FLASK_SECRET_KEY]
+        return current_app.config[FLASK_JWKS]
     except KeyError:
-        raise AuthSecretKeyNotSet(
-            '{} missing from Flask config'.format(FLASK_SECRET_KEY)
+        raise AuthJwksNotSet(
+            '{} missing from Flask config'.format(FLASK_JWKS)
         )
 
 

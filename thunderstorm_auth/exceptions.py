@@ -5,7 +5,7 @@ class ThunderstormAuthError(Exception):
     pass
 
 
-class AuthSecretKeyNotSet(ThunderstormAuthError):
+class AuthJwksNotSet(ThunderstormAuthError):
     pass
 
 

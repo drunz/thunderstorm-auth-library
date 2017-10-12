@@ -18,11 +18,11 @@ CONTEXT_KEY = 'ts_auth'
 class TsAuthMiddleware:
     """Falcon middleware for Thunderstorm Authentication."""
 
-    def __init__(self, auth_secret_key, expiration_leeway=0):
+    def __init__(self, jwks, expiration_leeway=0):
         """Falcon middleware for Thunderstorm Authentication.
 
         Args:
-            auth_secret_key (str): Secret key used to decode the auth token.
+            jwks (list): Set of jwks (dicts) which may be used to decode an auth token
             expiration_leeway (int): Optional number of seconds of lenience when
                 calculating token expiry.
 
@@ -34,8 +34,8 @@ class TsAuthMiddleware:
                 'Cannot create Falcon middleware as Falcon is not installed.'
             )
 
-        self.auth_secret_key = auth_secret_key
         self.expiration_leeway = expiration_leeway
+        self.jwks = jwks
 
     def process_resource(self, req, res, resource, params):
         requires_auth = getattr(resource, 'requires_auth', False)
@@ -52,7 +52,7 @@ class TsAuthMiddleware:
         token = _get_token(request)
         return decode_token(
             token,
-            secret_key=self.auth_secret_key,
+            self.jwks,
             leeway=self.expiration_leeway
         )
 
