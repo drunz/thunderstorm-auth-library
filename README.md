@@ -24,8 +24,8 @@ pip install thunderstorm-auth-lib[flask]
 Requirements
 ------------
 
-You will need to include the config variable `TS_AUTH_SECRET_KEY` in your Flask config. During beta
-phase, the value for this can be retrieved from the
+You will need to include the config variable `TS_AUTH_JWKS` in your Flask config. The JWKs stored in this variable
+will be used for decoding JWTs.
 [Thunderstorm User Service](https://github.com/artsalliancemedia/thunderstorm-user-service#using-your-jwt).
 
 
@@ -97,9 +97,12 @@ Server: Werkzeug/0.12.2 Python/3.5.3
 Exceptions
 ----------
 
-The exception `AuthSecretKeyNotSet` will be raised when `TS_AUTH_SECRET_KEY` is missing from the
-Flask config. 
+The exception `AuthJwksNotSet` will be raised when `TS_AUTH_JWKS` is missing from the
+Flask config.
 
+Both Flask and Falcon raise the following exceptions:
+`ExpiredTokenError` - If the token supplied for decoding has expired.
+`BrokenTokenError` - If the token supplied was malformed or the token does not match the JWK indicated in its 'Headers' section.
 
 Installing the library for dev
 ------------------------------
