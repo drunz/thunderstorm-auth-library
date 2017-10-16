@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 import pytest
 
 from thunderstorm_auth.decoder import decode_token
