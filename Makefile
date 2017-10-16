@@ -1,6 +1,6 @@
-.PHONY: build test clean dist release
+.PHONY: build test clean dist release lint
 
-test:
+test: lint
 	pytest --cov thunderstorm_auth --cov-report xml --junit-xml=results.xml test/
 
 build:
@@ -11,6 +11,9 @@ clean:
 
 dist: clean
 	python setup.py sdist
+
+lint:
+	flake8 thunderstorm_auth test
 
 release: dist
 	git tag v$$(python setup.py --version)
