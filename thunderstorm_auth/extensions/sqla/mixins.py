@@ -23,9 +23,9 @@ class AuthGroupAssociationMixin(object):
     Using an association table so we can adapt to any type of relationship
     (m2m in the specific) without adding a foreign key on the target model
     """
-    @declared_attr
-    def __tablename__(cls):
-        return 'ts_auth_group_association'
+    # @declared_attr
+    # def __tablename__(cls):
+    #     return 'ts_auth_group_association'
 
     @declared_attr
     def group_uuid(cls):

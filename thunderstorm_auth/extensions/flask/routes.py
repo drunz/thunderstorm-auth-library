@@ -52,13 +52,12 @@ def expose_pks():
     # TODO @shipperizer add pagination
     # TODO @shipperizer make it able to handle multiple models (different endpoints /models/<modelA>)
     # http://exploreflask.com/en/latest/views.html#custom-converters
-    pk_name = _datastore.model_pk_name
     return jsonify(
         {
             'data': {
-                _datastore.model.__name__.lower(): {
-                    pk_name: [_datastore.get_pks()],
-                },
+                name: {
+                    _datastore.model_pk_name(model): _datastore.get_pks(model)
+                } for name, model in _datastore.models.items()
             },
             'page': PAGE,
             'page_size': PAGE_SIZE
