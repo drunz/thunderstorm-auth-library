@@ -22,7 +22,7 @@ class TsAuthMiddleware:
         """Falcon middleware for Thunderstorm Authentication.
 
         Args:
-            jwks (list): Set of jwks (dicts) which may be used to decode an auth token
+            jwks (dict): JWK Set containing JWKs (dicts) which may be used to decode an auth token
             expiration_leeway (int): Optional number of seconds of lenience when
                 calculating token expiry.
 

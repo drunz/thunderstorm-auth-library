@@ -11,7 +11,7 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
 
     Args:
         token (str): Token data to decode.
-        jwks (list): List of dicts (jwks) to be tried to decode the token.
+        jwks (dict): JWK Set containing JWKs to be tried to decode the token.
         leeway (int): Number of seconds of lenience used in determining if a
             token has expired.
 
@@ -25,7 +25,7 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
     try:
         key_id = get_signing_key_id_from_jwt(token)
 
-        key_object = get_public_key_from_jwk(jwks[key_id])
+        key_object = get_public_key_from_jwk(jwks['keys'][key_id])
 
         return jwt.decode(
             jwt=token,
