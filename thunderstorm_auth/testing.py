@@ -28,6 +28,17 @@ def generate_private_key():
 
 
 def encode_token(private_key, payload):
+    """Encode a token with a private key
+
+    Args:
+        private_key (tuple): A private key from `generate_private_key`.
+                             Most likely from the `private_key` or
+                             `alternate_private_key` fixtures.
+        payload (dict):      The payload of the token.
+
+    Returns:
+        str: Encoded JWT
+    """
     return jwt.encode(
         payload,
         private_key[0],
