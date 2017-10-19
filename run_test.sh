@@ -3,8 +3,9 @@
 # This script is used by docker-compose to run tests against different python versions
 
 echo "Install package"
-pip install -e .
+apt-get update && apt-get -y --no-install-recommends install build-essential libffi-dev && apt-get clean && rm -rf /var/lib/apt/lists/*
+make build
 pip install -r requirements-dev.txt
 
 echo "Run tests"
-pytest --cov thunderstorm_auth --cov-report xml --junit-xml=results.xml test/
+make test
