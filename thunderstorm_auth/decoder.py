@@ -69,10 +69,7 @@ def get_signing_key_id_from_jwt(token):
         str: The kid of of the JWK used to sign the token.
     """
     # the outputs are payload, signing_input, header, signature
-    try:
-        token_contents = jwt.PyJWS()._load(token)
-    except jwt.exceptions.DecodeError:
-        raise
+    token_contents = jwt.PyJWS()._load(token)
 
     token_header = token_contents[2]
 
