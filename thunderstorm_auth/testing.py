@@ -11,7 +11,7 @@ import pytest
 __all__ = [
     'encode_token',
     'private_key', 'jwk', 'alternate_private_key', 'alternate_jwk',
-    'jwk_set', 'valid_token', 'invalid_token', 'expired_token',
+    'jwk_set', 'valid_token', 'invalid_token', 'invalid_token_no_headers', 'expired_token',
 ]
 
 
@@ -86,9 +86,14 @@ def valid_token(private_key):
 
 
 @pytest.fixture
-def invalid_token(valid_token):
+def invalid_token():
     # using a junk string here rather than a truncated token as truncated tokens do not trigger the desired error
     return 'this is not even a token'.encode('utf-8')
+
+
+@pytest.fixture
+def invalid_token_no_headers(private_key):
+    return jwt.encode({'data': 'nodata'}, private_key[0], algorithm='RS512')
 
 
 @pytest.fixture

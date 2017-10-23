@@ -25,6 +25,11 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
     try:
         key_id = get_signing_key_id_from_jwt(token)
 
+        if key_id is None:
+            raise BrokenTokenError(
+                'Token authentication failed due to missing <kid> token header'
+            )
+
         key_object = get_public_key_from_jwk(jwks['keys'][key_id])
 
         return jwt.decode(
@@ -73,4 +78,4 @@ def get_signing_key_id_from_jwt(token):
 
     token_header = token_contents[2]
 
-    return token_header['kid']
+    return token_header.get('kid')

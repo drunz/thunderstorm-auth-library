@@ -13,6 +13,11 @@ def test_get_decoded_token_raises_if_jwt_invalid(invalid_token, jwk_set):
         decode_token(invalid_token, jwk_set)
 
 
+def test_get_decoded_token_raises_if_jwt_headers_invalid(invalid_token_no_headers, jwk_set):
+    with pytest.raises(BrokenTokenError):
+        decode_token(invalid_token_no_headers, jwk_set)
+
+
 def test_get_decoded_token_raises_if_jwt_expired(expired_token, jwk_set):
     with pytest.raises(ExpiredTokenError):
         decode_token(expired_token, jwk_set)
