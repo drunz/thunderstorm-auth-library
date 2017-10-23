@@ -2,7 +2,7 @@ from .utils import load_jwks_from_file
 
 
 __title__ = 'thunderstorm-auth-lib'
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 
 TOKEN_HEADER = 'X-Thunderstorm-Key'
