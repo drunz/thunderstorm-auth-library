@@ -4,6 +4,7 @@ from thunderstorm_auth import TOKEN_HEADER
 from thunderstorm_auth.decoder import decode_token
 from thunderstorm_auth.exceptions import ThunderstormAuthError
 from thunderstorm_auth.exceptions import TokenError, TokenHeaderMissing
+from thunderstorm_auth.user import User
 
 try:
     import falcon
@@ -12,7 +13,7 @@ except ImportError:
     HAS_FALCON = False
 
 
-CONTEXT_KEY = 'ts_auth'
+USER_CONTEXT_KEY = 'ts_user'
 
 
 class TsAuthMiddleware:
@@ -42,11 +43,12 @@ class TsAuthMiddleware:
 
         if requires_auth:
             try:
-                decoded_auth_data = self._decode_token(req)
+                decoded_token_data = self._decode_token(req)
             except TokenError as error:
                 raise _bad_token(error)
-            else:
-                req.context[CONTEXT_KEY] = decoded_auth_data
+
+            user = User.from_decoded_token(decoded_token_data)
+            req.context[USER_CONTEXT_KEY] = user
 
     def _decode_token(self, request):
         token = _get_token(request)
