@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import jwt.algorithms
 import pytest
 
-from thunderstorm_auth import utils
+from test import utils
 
 
 @pytest.fixture
