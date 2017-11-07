@@ -1,2 +1,4 @@
-pyjwt>=1.5.2,<2
 cryptography>=2.0.3,<3
+celery>=4.0,<4.2
+pyjwt>=1.5.2,<2
+sqlalchemy>=1.1,<1.2
