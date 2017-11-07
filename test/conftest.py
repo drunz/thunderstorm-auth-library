@@ -1,10 +1,9 @@
-import json
 from datetime import datetime, timedelta
 
 import jwt.algorithms
 import pytest
 
-from test import utils
+from thunderstorm_auth import utils
 
 
 @pytest.fixture
@@ -14,9 +13,12 @@ def private_key():
 
 @pytest.fixture
 def jwk(private_key):
-    jwk = jwt.algorithms.RSAAlgorithm.to_jwk(private_key[0].public_key())
-    jwk_dict = json.loads(jwk)
-    return {private_key[1]: jwk_dict}
+    return utils.generate_jwk_string(private_key)
+
+
+@pytest.fixture
+def key_id(jwk):
+    return utils.generate_key_id(jwk)
 
 
 @pytest.fixture
@@ -26,18 +28,22 @@ def alternate_private_key():
 
 @pytest.fixture
 def alternate_jwk(alternate_private_key):
-    jwk = jwt.algorithms.RSAAlgorithm.to_jwk(alternate_private_key[0].public_key())
-    jwk_dict = json.loads(jwk)
-    return {alternate_private_key[1]: jwk_dict}
+    return utils.generate_jwk_string(alternate_private_key)
 
 
 @pytest.fixture
-def jwk_set(jwk, alternate_jwk):
-    jwks = {}
-    # merge dictionaries
-    jwks.update(jwk)
-    jwks.update(alternate_jwk)
-    return {"keys": jwks}
+def alternate_key_id(alternate_jwk):
+    return utils.generate_key_id(alternate_jwk)
+
+
+@pytest.fixture
+def jwk_set(jwk, key_id, alternate_jwk, alternate_key_id):
+    return {
+        'keys': {
+            key_id: jwk,
+            alternate_key_id: alternate_jwk
+        }
+    }
 
 
 @pytest.fixture
@@ -50,25 +56,35 @@ def token_data():
 
 
 @pytest.fixture
-def valid_token(private_key, token_data):
-    return utils.encode_token(private_key, token_data)
+def valid_token(private_key, key_id, token_data):
+    return utils.encode_token(
+        private_key,
+        key_id,
+        token_data
+    )
 
 
 @pytest.fixture
 def invalid_token():
-    # using a junk string here rather than a truncated token as truncated tokens do not trigger the desired error
+    # using a junk string here rather than a truncated token as truncated
+    # tokens do not trigger the desired error
     return 'this is not even a token'.encode('utf-8')
 
 
 @pytest.fixture
 def invalid_token_no_headers(private_key):
-    return jwt.encode({'data': 'nodata'}, private_key[0], algorithm='RS512')
+    return jwt.encode(
+        {'data': 'nodata'},
+        private_key,
+        algorithm='RS512'
+    )
 
 
 @pytest.fixture
-def expired_token(private_key, token_data):
+def expired_token(private_key, key_id, token_data):
     expiry = datetime.utcnow() - timedelta(hours=1)
     return utils.encode_token(
         private_key,
+        key_id,
         dict(token_data, exp=expiry)
     )

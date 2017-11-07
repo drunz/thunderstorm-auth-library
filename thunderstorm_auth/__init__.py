@@ -1,4 +1,4 @@
-from .utils import load_jwks_from_file
+from thunderstorm_auth.utils import load_jwks_from_file
 
 
 __title__ = 'thunderstorm-auth-lib'
