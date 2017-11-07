@@ -25,13 +25,15 @@ def generate_private_key():
     )
 
 
-def generate_jwk_string(private_key):
-    return RSAAlgorithm.to_jwk(private_key.public_key())
+def generate_jwk(private_key):
+    return json.loads(
+        RSAAlgorithm.to_jwk(private_key.public_key())
+    )
 
 
 def generate_key_id(jwk):
     return hashlib.md5(
-        jwk.encode('utf8')
+        json.dumps(jwk).encode('utf-8')
     ).hexdigest()
 
 

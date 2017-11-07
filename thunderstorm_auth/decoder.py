@@ -1,3 +1,5 @@
+import json
+
 import jwt
 import jwt.algorithms
 
@@ -53,7 +55,8 @@ def get_public_key_from_jwk(jwk):
     Returns:
         _RSAPublicKey
     """
-    return jwt.algorithms.RSAAlgorithm.from_jwk(jwk)
+    jwk_str = json.dumps(jwk)
+    return jwt.algorithms.RSAAlgorithm.from_jwk(jwk_str)
 
 
 def get_signing_key_id_from_jwt(token):

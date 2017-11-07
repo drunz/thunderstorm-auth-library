@@ -13,7 +13,7 @@ def private_key():
 
 @pytest.fixture
 def jwk(private_key):
-    return utils.generate_jwk_string(private_key)
+    return utils.generate_jwk(private_key)
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def alternate_private_key():
 
 @pytest.fixture
 def alternate_jwk(alternate_private_key):
-    return utils.generate_jwk_string(alternate_private_key)
+    return utils.generate_jwk(alternate_private_key)
 
 
 @pytest.fixture
