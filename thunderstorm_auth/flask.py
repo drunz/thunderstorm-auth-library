@@ -5,6 +5,7 @@ from flask import g
 from thunderstorm_auth import TOKEN_HEADER, DEFAULT_LEEWAY
 from thunderstorm_auth.decoder import decode_token
 from thunderstorm_auth.exceptions import TokenError, TokenHeaderMissing, AuthJwksNotSet, ThunderstormAuthError
+from thunderstorm_auth.user import User
 
 try:
     from flask import current_app, jsonify, request
@@ -12,8 +13,6 @@ try:
 except ImportError:
     HAS_FLASK = False
 
-
-EXTENSION_KEY = 'ts_auth'
 
 FLASK_JWKS = 'TS_AUTH_JWKS'
 FLASK_LEEWAY = 'TS_AUTH_LEEWAY'
@@ -36,11 +35,12 @@ def ts_auth_required(func):
     @wraps(func)
     def decorated_function(*args, **kwargs):
         try:
-            g.token = _decode_token()
+            decoded_token_data = _decode_token()
         except TokenError as error:
             return _bad_token(error)
-        else:
-            return func(*args, **kwargs)
+
+        g.user = User.from_decoded_token(decoded_token_data)
+        return func(*args, **kwargs)
 
     return decorated_function
 

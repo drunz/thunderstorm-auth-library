@@ -1,6 +1,7 @@
 import json
 
 import jwt
+import jwt.algorithms
 
 from thunderstorm_auth import DEFAULT_LEEWAY
 from thunderstorm_auth.exceptions import ExpiredTokenError, BrokenTokenError
@@ -25,16 +26,11 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
     try:
         key_id = get_signing_key_id_from_jwt(token)
 
-        if key_id is None:
-            raise BrokenTokenError(
-                'Token authentication failed due to missing <kid> token header'
-            )
-
-        key_object = get_public_key_from_jwk(jwks['keys'][key_id])
+        public_key = get_public_key_from_jwk(jwks['keys'][key_id])
 
         return jwt.decode(
             jwt=token,
-            key=key_object,
+            key=public_key,
             leeway=leeway,
             algorithms=['RS512']
         )
@@ -43,7 +39,7 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
         raise ExpiredTokenError(
             'Auth token expired. Please retry with a new token.'
         )
-    except jwt.exceptions.DecodeError as ex:
+    except jwt.exceptions.DecodeError:
         raise BrokenTokenError(
             'Token authentication failed due to a malformed token or incorrect JWK.'
         )
@@ -73,9 +69,11 @@ def get_signing_key_id_from_jwt(token):
     Returns:
         str: The kid of of the JWK used to sign the token.
     """
-    # the outputs are payload, signing_input, header, signature
-    token_contents = jwt.PyJWS()._load(token)
+    token_headers = jwt.PyJWS().get_unverified_header(token)
 
-    token_header = token_contents[2]
-
-    return token_header.get('kid')
+    try:
+        return token_headers['kid']
+    except KeyError:
+        raise BrokenTokenError(
+            'Token authentication failed due to missing <kid> token header'
+        )

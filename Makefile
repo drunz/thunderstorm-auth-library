@@ -1,7 +1,21 @@
-.PHONY: build test clean dist release lint
+.PHONY: requirements requirements-dev lint test build clean dist release
+
+
+requirements:
+	pip install -r requirements.txt
+
+requirements-dev: requirements
+	pip install -r requirements-dev.txt
+
+lint:
+	flake8 thunderstorm_auth test
 
 test: lint
-	pytest --cov thunderstorm_auth --cov-report xml --junit-xml=results.xml test/
+	pytest \
+		--cov thunderstorm_auth \
+		--cov-report xml \
+		--junit-xml=results.xml \
+		test/
 
 build:
 	pip install -e .
@@ -11,9 +25,6 @@ clean:
 
 dist: clean
 	python setup.py sdist
-
-lint:
-	flake8 thunderstorm_auth test
 
 release: dist
 	git tag v$$(python setup.py --version)

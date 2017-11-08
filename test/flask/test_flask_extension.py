@@ -1,5 +1,7 @@
 from flask import g
 
+from thunderstorm_auth.user import User
+
 
 def test_endpoint_returns_200_with_proper_token(valid_token, flask_app):
     headers = {'X-Thunderstorm-Key': valid_token}
@@ -8,12 +10,16 @@ def test_endpoint_returns_200_with_proper_token(valid_token, flask_app):
     assert response.status_code == 200
 
 
-def test_decoded_token_added_to_g(valid_token, flask_app):
+def test_user_with_decoded_token_added_to_g(valid_token, flask_app):
     with flask_app.app_context():
         headers = {'X-Thunderstorm-Key': valid_token}
         flask_app.test_client().get('/', headers=headers)
 
-        assert g.token == {'data': {'more': 123}}
+        assert g.user == User(
+            username='test-user',
+            permissions={},
+            groups=[]
+        )
 
 
 def test_endpoint_returns_401_with_invalid_token(invalid_token, flask_app):
