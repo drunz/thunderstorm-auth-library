@@ -1,4 +1,4 @@
-from thunderstorm_auth.tasks import group_sync_task
+from thunderstorm_auth.tasks import group_sync_task, group_sync_queue
 
 
 def init_group_sync_tasks(celery_app, db_session, group_models):
@@ -18,7 +18,12 @@ def init_group_sync_tasks(celery_app, db_session, group_models):
 
     for group_model in group_models:
         group_type = group_model.__ts_group_type__
-        celery_app.conf.task_queues.append(group_type.queue)
+
+        sync_queue = group_sync_queue(
+            group_type=group_type,
+            celery_main=celery_app.main
+        )
+        celery_app.conf.task_queues.append(sync_queue)
 
         sync_task = group_sync_task(
             model=group_model,

@@ -1,13 +1,6 @@
-import kombu.common
 from sqlalchemy.ext.declarative import declarative_base
 
 from thunderstorm_auth import group
-
-
-def test_complex_group_type_queue():
-    queue = group.COMPLEX_GROUP_TYPE.queue
-    assert isinstance(queue, kombu.common.Broadcast)
-    assert queue.alias == 'thunderstorm_auth.group.sync.complex'
 
 
 def test_create_complex_group_model():

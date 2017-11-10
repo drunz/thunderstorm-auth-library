@@ -1,5 +1,26 @@
 import celery.task
+import kombu.common
 from sqlalchemy.exc import SQLAlchemyError
+
+
+def group_sync_queue(group_type, celery_main):
+    """Create a queue for group sync tasks.
+
+    Queue is a broadcast queue and is unique per group type and per service.
+
+    Args:
+        group_type (GroupType): Group type to create the queue for.
+        celery_main (str): Value of `celery_app.main` for the service adding
+            the queue.
+
+    Returns:
+        kombu.common.Broadcast: Queue group sync tasks will be published to.
+    """
+    queue_name = '{task}.bcast.{service}'.format(
+        task=group_type.task_name,
+        service=celery_main
+    )
+    return kombu.common.Broadcast(group_type.task_name, queue=queue_name)
 
 
 def group_sync_task(model, db_session):

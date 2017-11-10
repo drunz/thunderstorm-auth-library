@@ -1,4 +1,3 @@
-import kombu.common
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -13,7 +12,7 @@ def _camel_case(value):
 class GroupType:
     """Definition of a auth group type.
 
-    Provides sync task name, task queue and model/table names.
+    Provides sync task name, model name, table names, mapping column name.
     """
 
     _table_name_tmpl = '{}_group_map'
@@ -27,8 +26,6 @@ class GroupType:
         self.map_column_name = self._map_column_name_tmpl.format(self.name)
 
         self.task_name = self._task_name_tmpl.format(self.name)
-
-        self.queue = kombu.common.Broadcast(self.task_name)
 
 
 COMPLEX_GROUP_TYPE = GroupType('complex')

@@ -2,6 +2,7 @@ import uuid
 
 import celery
 import celery.task
+import kombu.common
 import pytest
 from sqlalchemy.ext.declarative import declarative_base
 from unittest import mock
@@ -21,10 +22,25 @@ def model(group_type):
 
 
 @pytest.fixture(autouse=True)
-def celery_app(group_type):
+def _teardown_celery_app(group_type):
     app = celery.current_app
-    yield
-    app.tasks.unregister(group_type.task_name)
+    yield app
+    if group_type.task_name in app.tasks:
+        app.tasks.unregister(group_type.task_name)
+
+
+def test_create_group_sync_queue(group_type):
+    # arrange
+    celery_app = celery.Celery('test_app')
+
+    # act
+    queue = tasks.group_sync_queue(group_type, celery_app.main)
+
+    # assert
+    assert isinstance(queue, kombu.common.Broadcast)
+    assert queue.alias == 'thunderstorm_auth.group.sync.example'
+    assert queue.name == 'thunderstorm_auth.group.sync.example.bcast.test_app'
+    assert queue.exchange.name == 'thunderstorm_auth.group.sync.example'
 
 
 def test_create_group_sync_task(model):
