@@ -1,11 +1,11 @@
 import uuid
+from unittest import mock
 
 import celery
 import celery.task
 import kombu.common
 import pytest
 from sqlalchemy.ext.declarative import declarative_base
-from unittest import mock
 
 from thunderstorm_auth import group, tasks
 
@@ -18,7 +18,7 @@ def group_type():
 @pytest.fixture
 def model(group_type):
     base = declarative_base()
-    return group.create_group_map_model(group_type, base)
+    return group.create_group_association_model(group_type, base)
 
 
 @pytest.fixture(autouse=True)
@@ -38,9 +38,9 @@ def test_create_group_sync_queue(group_type):
 
     # assert
     assert isinstance(queue, kombu.common.Broadcast)
-    assert queue.alias == 'thunderstorm_auth.group.sync.example'
-    assert queue.name == 'thunderstorm_auth.group.sync.example.bcast.test_app'
-    assert queue.exchange.name == 'thunderstorm_auth.group.sync.example'
+    assert queue.alias == 'thunderstorm_auth.example_group.sync'
+    assert queue.name == 'thunderstorm_auth.example_group.sync.bcast.test_app'
+    assert queue.exchange.name == 'thunderstorm_auth.example_group.sync'
 
 
 def test_create_group_sync_task(model):
@@ -52,14 +52,14 @@ def test_create_group_sync_task(model):
 
     # assert
     assert isinstance(task, celery.task.Task)
-    assert task.name == 'thunderstorm_auth.group.sync.example'
+    assert task.name == 'thunderstorm_auth.example_group.sync'
 
 
 @mock.patch('thunderstorm_auth.tasks.get_current_members')
-@mock.patch('thunderstorm_auth.tasks.delete_group_maps')
-@mock.patch('thunderstorm_auth.tasks.add_group_maps')
+@mock.patch('thunderstorm_auth.tasks.delete_group_associations')
+@mock.patch('thunderstorm_auth.tasks.add_group_associations')
 def test_group_sync_task_run(
-        add_group_maps, delete_group_maps, get_current_members, model):
+        add_group_associations, delete_group_associations, get_current_members, model):
     # arrange
     db_session = mock.Mock(name='db_session')
     task = tasks.group_sync_task(model, db_session)
@@ -79,13 +79,13 @@ def test_group_sync_task_run(
         model,
         group_uuid
     )
-    delete_group_maps.assert_called_with(
+    delete_group_associations.assert_called_with(
         db_session,
         model,
         group_uuid,
         {all_members[0]}
     )
-    add_group_maps.assert_called_with(
+    add_group_associations.assert_called_with(
         db_session,
         model,
         group_uuid,

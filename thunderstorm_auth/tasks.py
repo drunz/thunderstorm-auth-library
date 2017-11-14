@@ -1,4 +1,4 @@
-import celery.task
+import celery
 import kombu.common
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -36,7 +36,7 @@ def group_sync_task(model, db_session):
     longer reported.
 
     Args:
-        model (Base): Group map model to define the task for.
+        model (Base): Group association model to define the task for.
         db_session: Session object used to perform the inserts/deletes.
 
     Returns:
@@ -44,7 +44,7 @@ def group_sync_task(model, db_session):
     """
     task_name = model.__ts_group_type__.task_name
 
-    @celery.task.task(name=task_name)
+    @celery.task(name=task_name)
     def sync_group_data(group_uuid, members):
         """Synchronizes group membership data.
 
@@ -61,13 +61,13 @@ def group_sync_task(model, db_session):
         removed = current_members - latest_members
         added = latest_members - current_members
 
-        delete_group_maps(
+        delete_group_associations(
             db_session,
             model,
             group_uuid,
             removed
         )
-        add_group_maps(
+        add_group_associations(
             db_session,
             model,
             group_uuid,
@@ -87,7 +87,7 @@ def get_current_members(db_session, model, group_uuid):
 
     Args:
         db_session (Session): Database session used to query the records.
-        model (Base): Group map model being queried.
+        model (Base): Group association model being queried.
         group_uuid (UUID): UUID of the group whose members to fetch
 
     Returns:
@@ -111,43 +111,41 @@ def get_current_members(db_session, model, group_uuid):
     }
 
 
-def delete_group_maps(db_session, model, group_uuid, removed):
+def delete_group_associations(db_session, model, group_uuid, removed):
     """Delete group members.
 
     Args:
         db_session (Session): Database session used to delete the records.
-        model (Base): Group map model being updated.
+        model (Base): Group association model being updated.
         group_uuid (UUID): UUID of the group whose members to fetch
         removed (set): UUIDs of members being removed.
     """
-    group_column = getattr(model, 'group_uuid')
     member_column = getattr(model, model.__ts_group_type__.member_column_name)
 
     db_session.query(
         model
     ).filter(
-        group_column == group_uuid,
+        model.group_uuid == group_uuid,
         member_column.in_(removed)
     ).delete(
         synchronize_session=False
     )
 
 
-def add_group_maps(db_session, model, group_uuid, added):
+def add_group_associations(db_session, model, group_uuid, added):
     """Add members to a group.
 
     Args:
         db_session (Session): Database session used to create the records.
-        model (Base): Group map model being updated.
+        model (Base): Group association model being updated.
         group_uuid (UUID): UUID of the group whose members to fetch
         added (set): UUIDs of members being added.
     """
-    group_column = getattr(model, 'group_uuid')
     member_column = getattr(model, model.__ts_group_type__.member_column_name)
 
     db_session.bulk_insert_mappings(model, [
         {
-            group_column: group_uuid,
+            model.group_uuid: group_uuid,
             member_column: member_id
         }
         for member_id in added

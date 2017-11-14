@@ -20,8 +20,8 @@ def models(group_types):
     base = declarative_base()
     foo_type, bar_type = group_types
     return [
-        group.create_group_map_model(foo_type, base),
-        group.create_group_map_model(bar_type, base)
+        group.create_group_association_model(foo_type, base),
+        group.create_group_association_model(bar_type, base)
     ]
 
 
