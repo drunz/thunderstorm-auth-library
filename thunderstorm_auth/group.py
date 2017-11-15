@@ -12,20 +12,46 @@ def _camel_case(value):
 class GroupType:
     """Definition of a auth group type.
 
-    Provides sync task name, model name, table names, member column name.
-    """
+    Attrs:
+        - `table_name`: db table name
+        - `model_name`: orm model name
+        - `member_column_name`: member association column name
+        - `task_name`: sync task name
+        - `routing_key`: sync task routing key
+    Methods:
+        - `queue_name(celery_app)`: sync task queue name
 
-    _table_name_tmpl = '{}_group_association'
-    _member_column_name_tmpl = '{}_uuid'
-    _task_name_tmpl = 'thunderstorm_auth.{}_group.sync'
+    Example:
+        ```
+        gt = GroupType('foo')
+
+        gt.table_name           # 'foo_group_association'
+        gt.model_name           # 'FooGroupAssociation'
+        gt.member_column_name   # 'foo_uuid'
+
+        gt.task_name            # 'ts_auth.group.foo.sync'
+        gt.queue_name           # 'my_service.ts_auth.group.foo'
+        gt.routing_key          # 'group.foo'
+        ```
+    """
 
     def __init__(self, name):
         self.name = name.lower()
-        self.table_name = self._table_name_tmpl.format(self.name)
-        self.model_name = _camel_case(self.table_name)
-        self.member_column_name = self._member_column_name_tmpl.format(self.name)
 
-        self.task_name = self._task_name_tmpl.format(self.name)
+        # model attrs
+        self.table_name = '{name}_group_association'.format(name=self.name)
+        self.model_name = _camel_case(self.table_name)
+        self.member_column_name = '{name}_uuid'.format(name=self.name)
+
+        # task attrs
+        self.routing_key = 'group.{name}'.format(name=self.name)
+        self.task_name = 'ts_auth.group.{name}.sync'.format(name=self.name)
+
+    def queue_name(self, celery_main):
+        return '{celery_main}.ts_auth.group.{name}'.format(
+            celery_main=celery_main,
+            name=self.name
+        )
 
 
 COMPLEX_GROUP_TYPE = GroupType('complex')

@@ -43,9 +43,8 @@ def test_init_group_sync_tasks(celery_app, models, group_types):
     setup.init_group_sync_tasks(celery_app, db_session, models)
 
     # assert
-    assert {q.alias for q in celery_app.conf.task_queues} == {
-        foo_type.task_name,
-        bar_type.task_name
-    }
+    queue_names = {q.name for q in celery_app.conf.task_queues}
+    assert foo_type.queue_name(celery_app.main) in queue_names
+    assert bar_type.queue_name(celery_app.main) in queue_names
     assert foo_type.task_name in celery_app.tasks
     assert bar_type.task_name in celery_app.tasks

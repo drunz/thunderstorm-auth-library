@@ -1,12 +1,13 @@
 import celery
-import kombu.common
+import kombu
 from sqlalchemy.exc import SQLAlchemyError
 
 
-def group_sync_queue(group_type, celery_main):
-    """Create a queue for group sync tasks.
+EXCHANGE = kombu.Exchange('ts_auth.group')
 
-    Queue is a broadcast queue and is unique per group type and per service.
+
+def group_sync_queue(group_type, celery_main):
+    """Create a queue object which group sync tasks will be consumed from.
 
     Args:
         group_type (GroupType): Group type to create the queue for.
@@ -14,13 +15,13 @@ def group_sync_queue(group_type, celery_main):
             the queue.
 
     Returns:
-        kombu.common.Broadcast: Queue group sync tasks will be published to.
+        kombu.Queue: Queue that group sync tasks will be published to.
     """
-    queue_name = '{task}.bcast.{service}'.format(
-        task=group_type.task_name,
-        service=celery_main
+    return kombu.Queue(
+        name=group_type.queue_name(celery_main),
+        exchange=EXCHANGE,
+        routing_key=group_type.routing_key
     )
-    return kombu.common.Broadcast(group_type.task_name, queue=queue_name)
 
 
 def group_sync_task(model, db_session):
@@ -93,12 +94,10 @@ def get_current_members(db_session, model, group_uuid):
     Returns:
         set: Set of UUIDs of current members.
     """
-    group_column = getattr(model, 'group_uuid')
-
     members = db_session.query(
         model
     ).filer(
-        group_column == group_uuid
+        model.group_uuid == group_uuid
     )
 
     def member_column(item):

@@ -29,6 +29,10 @@ def _teardown_celery_app(group_type):
         app.tasks.unregister(group_type.task_name)
 
 
+def test_exchange_name():
+    assert tasks.EXCHANGE.name == 'ts_auth.group'
+
+
 def test_create_group_sync_queue(group_type):
     # arrange
     celery_app = celery.Celery('test_app')
@@ -37,10 +41,10 @@ def test_create_group_sync_queue(group_type):
     queue = tasks.group_sync_queue(group_type, celery_app.main)
 
     # assert
-    assert isinstance(queue, kombu.common.Broadcast)
-    assert queue.alias == 'thunderstorm_auth.example_group.sync'
-    assert queue.name == 'thunderstorm_auth.example_group.sync.bcast.test_app'
-    assert queue.exchange.name == 'thunderstorm_auth.example_group.sync'
+    assert isinstance(queue, kombu.Queue)
+    assert queue.name == 'test_app.ts_auth.group.example'
+    assert queue.exchange == tasks.EXCHANGE
+    assert queue.routing_key == 'group.example'
 
 
 def test_create_group_sync_task(model):
@@ -52,7 +56,7 @@ def test_create_group_sync_task(model):
 
     # assert
     assert isinstance(task, celery.task.Task)
-    assert task.name == 'thunderstorm_auth.example_group.sync'
+    assert task.name == 'ts_auth.group.example.sync'
 
 
 @mock.patch('thunderstorm_auth.tasks.get_current_members')
