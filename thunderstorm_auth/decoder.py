@@ -4,7 +4,7 @@ import jwt
 import jwt.algorithms
 
 from thunderstorm_auth import DEFAULT_LEEWAY
-from thunderstorm_auth.exceptions import ExpiredTokenError, BrokenTokenError
+from thunderstorm_auth.exceptions import ExpiredTokenError, BrokenTokenError, MissingKeyErrror
 
 
 def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
@@ -22,6 +22,7 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
     Raises:
         ExpiredTokenError: If the token has expired.
         BrokenTokenError: If the token is malformed.
+        MissingKeyErrror: If the key_id in the token is not present in the JWK set provided.
     """
     try:
         key_id = get_signing_key_id_from_jwt(token)
@@ -43,6 +44,9 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
         raise BrokenTokenError(
             'Token authentication failed due to a malformed token or incorrect JWK.'
         )
+    except KeyError:
+        raise MissingKeyErrror(
+            'The key_id specified in your token is not present in the JWK set provided.')
 
 
 def get_public_key_from_jwk(jwk):

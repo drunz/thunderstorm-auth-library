@@ -61,10 +61,11 @@ def _get_token():
 
 def _get_jwks():
     try:
+        current_app.config[FLASK_JWKS]['keys']
         return current_app.config[FLASK_JWKS]
     except KeyError:
         raise AuthJwksNotSet(
-            '{} missing from Flask config'.format(FLASK_JWKS)
+            '{} missing from Flask config or JWK set not structured correctly'.format(FLASK_JWKS)
         )
 
 
