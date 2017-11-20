@@ -3,7 +3,7 @@ import json
 from thunderstorm_auth import TOKEN_HEADER
 from thunderstorm_auth.decoder import decode_token
 from thunderstorm_auth.exceptions import ThunderstormAuthError
-from thunderstorm_auth.exceptions import TokenError, TokenHeaderMissing
+from thunderstorm_auth.exceptions import TokenError, TokenHeaderMissing, AuthJwksNotSet
 from thunderstorm_auth.user import User
 
 try:
@@ -52,6 +52,10 @@ class TsAuthMiddleware:
 
     def _decode_token(self, request):
         token = _get_token(request)
+        if not self.jwks.get('keys'):
+            raise AuthJwksNotSet(
+                'There are no JWKs in the JWK set provided or the set is not structured properly'
+            )
         return decode_token(
             token,
             self.jwks,

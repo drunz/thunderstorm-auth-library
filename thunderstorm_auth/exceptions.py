@@ -13,6 +13,10 @@ class TokenError(ThunderstormAuthError):
     pass
 
 
+class MissingKeyErrror(TokenError):
+    pass
+
+
 class TokenHeaderMissing(TokenError):
 
     def __init__(self):

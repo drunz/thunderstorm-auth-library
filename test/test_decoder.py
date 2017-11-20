@@ -1,7 +1,7 @@
 import pytest
 
 from thunderstorm_auth.decoder import decode_token
-from thunderstorm_auth.exceptions import ExpiredTokenError, BrokenTokenError
+from thunderstorm_auth.exceptions import ExpiredTokenError, BrokenTokenError, MissingKeyErrror
 
 
 def test_get_decoded_token_returns_if_jwt_valid(valid_token, jwk_set):
@@ -32,3 +32,8 @@ def test_get_decoded_token_with_jwk_set_raises_broken_token_error_if_token_is_ma
         invalid_token, jwk_set):
     with pytest.raises(BrokenTokenError):
         decode_token(invalid_token, jwk_set, leeway=3605)
+
+
+def test_decode_token_raises_missing_key_error_if_invalid_key_id_specified_in_jwk(valid_token):
+    with pytest.raises(MissingKeyErrror):
+        decode_token(valid_token, {})
