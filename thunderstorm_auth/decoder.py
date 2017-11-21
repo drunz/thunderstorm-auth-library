@@ -25,7 +25,7 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
         MissingKeyErrror: If the key_id in the token is not present in the JWK set provided.
     """
     try:
-        key_id = get_signing_key_id_from_jwt(token)
+        key_id, algorithm = get_kid_and_alg_headers_from_token(token)
 
         public_key = get_public_key_from_jwk(jwks['keys'][key_id])
 
@@ -33,20 +33,19 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
             jwt=token,
             key=public_key,
             leeway=leeway,
-            algorithms=['RS512']
+            algorithms=[algorithm]
         )
 
     except jwt.exceptions.ExpiredSignatureError:
         raise ExpiredTokenError(
             'Auth token expired. Please retry with a new token.'
         )
-    except jwt.exceptions.DecodeError:
-        raise BrokenTokenError(
-            'Token authentication failed due to a malformed token or incorrect JWK.'
-        )
+    except BrokenTokenError as ex:
+        raise BrokenTokenError(ex)
     except KeyError:
         raise MissingKeyErrror(
-            'The key_id specified in your token is not present in the JWK set provided.')
+            'The key_id specified in your token is not present in the JWK set provided.'
+        )
 
 
 def get_public_key_from_jwk(jwk):
@@ -63,21 +62,25 @@ def get_public_key_from_jwk(jwk):
     return jwt.algorithms.RSAAlgorithm.from_jwk(jwk_str)
 
 
-def get_signing_key_id_from_jwt(token):
+def get_kid_and_alg_headers_from_token(token):
     """
-    Match a token to a particular JWK based on kid (Key ID)
+    Extract the kid and alg headers from a JWT
 
     Args:
         token (str): Signed token from the user service
 
     Returns:
-        str: The kid of of the JWK used to sign the token.
-    """
-    token_headers = jwt.PyJWS().get_unverified_header(token)
+        tuple: Tuple of strings containing the key_id and algorithm used for signing the JWT
 
+    Raises:
+        BrokenTokenError: If the JWT is malformed or missing required headers.
+    """
     try:
-        return token_headers['kid']
+        token_headers = jwt.PyJWS().get_unverified_header(token)
+        return token_headers['kid'], token_headers['alg']
+    except jwt.exceptions.DecodeError:
+        msg = 'The token supplied is either malformed or missing required segments.'
     except KeyError:
-        raise BrokenTokenError(
-            'Token authentication failed due to missing <kid> token header'
-        )
+        msg = 'Token authentication failed due to missing <kid> or <alg> token header'
+
+    raise BrokenTokenError(msg)
