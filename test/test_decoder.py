@@ -1,6 +1,6 @@
 import pytest
 
-from thunderstorm_auth.decoder import decode_token
+from thunderstorm_auth.decoder import decode_token, get_kid_and_alg_headers_from_token
 from thunderstorm_auth.exceptions import ExpiredTokenError, BrokenTokenError, MissingKeyErrror
 
 
@@ -37,3 +37,14 @@ def test_get_decoded_token_with_jwk_set_raises_broken_token_error_if_token_is_ma
 def test_decode_token_raises_missing_key_error_if_invalid_key_id_specified_in_jwk(valid_token):
     with pytest.raises(MissingKeyErrror):
         decode_token(valid_token, {})
+
+
+def test_get_headers_from_token_returns_key_id_and_signing_algorithm(valid_token, key_id):
+    kid, alg = get_kid_and_alg_headers_from_token(valid_token)
+    assert kid == key_id
+    assert alg == 'RS512'
+
+
+def test_get_headers_from_token_raises_BrokenTokenError_if_headers_are_missing():
+    with pytest.raises(BrokenTokenError):
+        get_kid_and_alg_headers_from_token('not a token')
