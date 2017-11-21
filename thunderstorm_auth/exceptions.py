@@ -29,3 +29,7 @@ class BrokenTokenError(TokenError):
 
 class ExpiredTokenError(TokenError):
     pass
+
+
+class InsufficientPermissions(ThunderstormAuthError):
+    pass
