@@ -5,6 +5,7 @@ services:
   tox:
     build: .
     volumes:
+      - ./results.xml:/app/results.xml
       - ./thunderstorm_auth/:/src/thunderstorm_auth
       - ./test/:/src/test
 
