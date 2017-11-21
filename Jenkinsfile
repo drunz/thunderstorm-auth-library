@@ -26,11 +26,7 @@ node('aam-identity-prodcd') {
     try {
         stage('Test') {
             // run unit tests
-            sh 'docker-compose run python3.4 /bin/bash run_test.sh'
-            junit 'results.xml'
-            sh 'docker-compose run python3.5 /bin/bash run_test.sh'
-            junit 'results.xml'
-            sh 'docker-compose run python3.6 /bin/bash run_test.sh'
+            sh 'docker-compose run tox'
             junit 'results.xml'
             sh 'docker-compose down'
         }
