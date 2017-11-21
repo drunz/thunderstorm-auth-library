@@ -21,3 +21,11 @@ services:
     working_dir: /var/app
     volumes:
       - ./:/var/app
+
+  postgres:
+    image: postgres:9.6
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - 5432
