@@ -65,6 +65,16 @@ def valid_token(private_key, key_id, token_data):
 
 
 @pytest.fixture
+def valid_token_signed_with_incorrect_key(key_id, token_data, alternate_private_key):
+    return utils.encode_token(
+        # token should have been signed with private_key
+        alternate_private_key,
+        key_id,
+        token_data
+    )
+
+
+@pytest.fixture
 def invalid_token():
     # using a junk string here rather than a truncated token as truncated
     # tokens do not trigger the desired error
