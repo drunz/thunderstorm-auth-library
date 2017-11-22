@@ -4,7 +4,8 @@ import jwt
 import jwt.algorithms
 
 from thunderstorm_auth import DEFAULT_LEEWAY
-from thunderstorm_auth.exceptions import ExpiredTokenError, BrokenTokenError, MissingKeyErrror
+from thunderstorm_auth.exceptions import (ExpiredTokenError, BrokenTokenError, MissingKeyErrror,
+                                          TokenDecodeError)
 
 
 def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
@@ -40,6 +41,8 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
         raise ExpiredTokenError(
             'Auth token expired. Please retry with a new token.'
         )
+    except jwt.exceptions.DecodeError as ex:
+        raise TokenDecodeError('An error occurred while decoding your token: {}'.format(ex))
     except BrokenTokenError as ex:
         raise BrokenTokenError(ex)
     except KeyError:

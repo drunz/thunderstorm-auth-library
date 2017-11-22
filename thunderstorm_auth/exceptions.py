@@ -17,6 +17,10 @@ class MissingKeyErrror(TokenError):
     pass
 
 
+class TokenDecodeError(TokenError):
+    pass
+
+
 class TokenHeaderMissing(TokenError):
 
     def __init__(self):

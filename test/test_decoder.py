@@ -1,7 +1,8 @@
 import pytest
 
 from thunderstorm_auth.decoder import decode_token, get_kid_and_alg_headers_from_token
-from thunderstorm_auth.exceptions import ExpiredTokenError, BrokenTokenError, MissingKeyErrror
+from thunderstorm_auth.exceptions import (ExpiredTokenError, BrokenTokenError, MissingKeyErrror,
+                                          TokenDecodeError)
 
 
 def test_get_decoded_token_returns_if_jwt_valid(valid_token, jwk_set):
@@ -48,3 +49,8 @@ def test_get_headers_from_token_returns_key_id_and_signing_algorithm(valid_token
 def test_get_headers_from_token_raises_BrokenTokenError_if_headers_are_missing():
     with pytest.raises(BrokenTokenError):
         get_kid_and_alg_headers_from_token('not a token')
+
+
+def test_decode_valid_token_with_invalid_key(valid_token_signed_with_incorrect_key, jwk_set):
+    with pytest.raises(TokenDecodeError):
+        decode_token(valid_token_signed_with_incorrect_key, jwk_set)
