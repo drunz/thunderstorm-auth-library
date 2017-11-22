@@ -1,27 +1,5 @@
 import celery
-import kombu
 from sqlalchemy.exc import SQLAlchemyError
-
-
-EXCHANGE = kombu.Exchange('ts_auth.group')
-
-
-def group_sync_queue(group_type, celery_main):
-    """Create a queue object which group sync tasks will be consumed from.
-
-    Args:
-        group_type (GroupType): Group type to create the queue for.
-        celery_main (str): Value of `celery_app.main` for the service adding
-            the queue.
-
-    Returns:
-        kombu.Queue: Queue that group sync tasks will be published to.
-    """
-    return kombu.Queue(
-        name=group_type.queue_name(celery_main),
-        exchange=EXCHANGE,
-        routing_key=group_type.routing_key
-    )
 
 
 def group_sync_task(model, db_session):

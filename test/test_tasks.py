@@ -3,7 +3,6 @@ from unittest import mock
 
 import celery
 import celery.task
-import kombu.common
 import pytest
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -27,24 +26,6 @@ def _teardown_celery_app(group_type):
     yield app
     if group_type.task_name in app.tasks:
         app.tasks.unregister(group_type.task_name)
-
-
-def test_exchange_name():
-    assert tasks.EXCHANGE.name == 'ts_auth.group'
-
-
-def test_create_group_sync_queue(group_type):
-    # arrange
-    celery_app = celery.Celery('test_app')
-
-    # act
-    queue = tasks.group_sync_queue(group_type, celery_app.main)
-
-    # assert
-    assert isinstance(queue, kombu.Queue)
-    assert queue.name == 'test_app.ts_auth.group.example'
-    assert queue.exchange == tasks.EXCHANGE
-    assert queue.routing_key == 'group.example'
 
 
 def test_create_group_sync_task(model):
