@@ -4,6 +4,8 @@ services:
 
   tox:
     build: .
+    links:
+      - postgres
     volumes:
       - ./results.xml:/app/results.xml
       - ./thunderstorm_auth/:/src/thunderstorm_auth
