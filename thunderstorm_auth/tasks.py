@@ -118,12 +118,10 @@ def add_group_associations(db_session, model, group_uuid, added):
         group_uuid (UUID): UUID of the group whose members to fetch
         added (set): UUIDs of members being added.
     """
-    member_column = getattr(model, model.__ts_group_type__.member_column_name)
-
     db_session.bulk_insert_mappings(model, [
         {
-            model.group_uuid: group_uuid,
-            member_column: member_id
+            'group_uuid': group_uuid,
+            model.__ts_group_type__.member_column_name: member_id
         }
         for member_id in added
     ])
