@@ -56,9 +56,9 @@ def group_sync_task(model, db_session):
             )
         try:
             db_session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as error:
             db_session.rollback()
-            raise
+            raise sync_group_data.retry(exc=error)
 
     return sync_group_data
 
