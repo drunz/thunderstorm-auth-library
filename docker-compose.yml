@@ -1,32 +1,17 @@
 version: '2'
 
 services:
-  python3.4:
-    image: python:3.4-slim
-    command: /bin/bash run_test.sh
-    working_dir: /var/app
-    links:
-      - postgres
-    volumes:
-      - ./:/var/app
 
-  python3.5:
-    image: python:3.5-slim
-    command: /bin/bash run_test.sh
-    working_dir: /var/app
+  tox:
+    build: .
     links:
       - postgres
     volumes:
-      - ./:/var/app
-
-  python3.6:
-    image: python:3.6-slim
-    command: /bin/bash run_test.sh
-    working_dir: /var/app
-    links:
-      - postgres
-    volumes:
-      - ./:/var/app
+      - ./thunderstorm_auth/:/src/thunderstorm_auth
+      - ./test/:/src/test
+      - ./test_results/:/app/test_results
+      - ./Makefile:/src/Makefile
+      - ./.flake8:/src/.flake8
 
   postgres:
     image: postgres:9.6

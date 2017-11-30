@@ -14,7 +14,7 @@ test: lint
 	pytest \
 		--cov thunderstorm_auth \
 		--cov-report xml \
-		--junit-xml=results.xml \
+		--junit-xml test_results/results.xml \
 		test/
 
 build:

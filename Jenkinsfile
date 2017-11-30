@@ -26,16 +26,12 @@ node('aam-identity-prodcd') {
     try {
         stage('Test') {
             // run unit tests
-            sh 'docker-compose run python3.4 /bin/bash run_test.sh'
-            junit 'results.xml'
-            sh 'docker-compose run python3.5 /bin/bash run_test.sh'
-            junit 'results.xml'
-            sh 'docker-compose run python3.6 /bin/bash run_test.sh'
-            junit 'results.xml'
+            sh 'docker-compose run tox'
+            junit 'test_results/results.xml'
             sh 'docker-compose down'
         }
     } catch (err) {
-        junit 'results.xml'
+        junit 'test_results/results.xml'
         error 'Thunderstorm Client Staging build failed ${err}'
 
     } finally {
