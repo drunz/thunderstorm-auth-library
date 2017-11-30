@@ -40,18 +40,20 @@ def group_sync_task(model, db_session):
         removed = current_members - latest_members
         added = latest_members - current_members
 
-        delete_group_associations(
-            db_session,
-            model,
-            group_uuid,
-            removed
-        )
-        add_group_associations(
-            db_session,
-            model,
-            group_uuid,
-            added
-        )
+        if removed:
+            delete_group_associations(
+                db_session,
+                model,
+                group_uuid,
+                removed
+            )
+        if added:
+            add_group_associations(
+                db_session,
+                model,
+                group_uuid,
+                added
+            )
         try:
             db_session.commit()
         except SQLAlchemyError:
