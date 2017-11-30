@@ -74,7 +74,7 @@ def get_current_members(db_session, model, group_uuid):
     """
     members = db_session.query(
         model
-    ).filer(
+    ).filter(
         model.group_uuid == group_uuid
     )
 

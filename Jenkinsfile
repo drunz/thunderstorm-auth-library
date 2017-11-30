@@ -27,11 +27,11 @@ node('aam-identity-prodcd') {
         stage('Test') {
             // run unit tests
             sh 'docker-compose run tox'
-            junit 'results.xml'
+            junit 'test_results/results.xml'
             sh 'docker-compose down'
         }
     } catch (err) {
-        junit 'results.xml'
+        junit 'test_results/results.xml'
         error 'Thunderstorm Client Staging build failed ${err}'
 
     } finally {

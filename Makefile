@@ -12,9 +12,9 @@ lint:
 
 test: lint
 	pytest \
-		--cov thunderstorm_auth\
-		--cov-report xml\
-		--junit-xml results.xml\
+		--cov thunderstorm_auth \
+		--cov-report xml \
+		--junit-xml test_results/results.xml \
 		test/
 
 build:

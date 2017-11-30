@@ -7,9 +7,11 @@ services:
     links:
       - postgres
     volumes:
-      - ./results.xml:/app/results.xml
       - ./thunderstorm_auth/:/src/thunderstorm_auth
       - ./test/:/src/test
+      - ./test_results/:/app/test_results
+      - ./Makefile:/src/Makefile
+      - ./.flake8:/src/.flake8
 
   postgres:
     image: postgres:9.6
