@@ -30,6 +30,7 @@ def models(group_types):
 def celery_app(group_types):
     foo_type, bar_type = group_types
     app = celery.Celery('example_service')
+    app.broker_connection = mock.Mock()
     yield app
     app.tasks.unregister(foo_type.task_name)
     app.tasks.unregister(bar_type.task_name)
@@ -61,18 +62,13 @@ def test_init_group_sync_queue(celery_app, models, group_types):
     setup.init_group_sync_tasks(celery_app, db_session, models)
 
     # assert
-    queues = [
-        q for q in celery_app.conf.task_queues
-        if q.name != celery_app.conf.task_default_queue
-    ]
-    assert len(queues) == 1, queues
-    queue = queues[0]
+    queue = celery_app.conf.task_queues[0]
     assert isinstance(queue, kombu.Queue)
     assert queue.name == 'example_service.ts_auth.group'
-    assert {binding.exchange for binding in queue.bindings} == {
-        setup.EXCHANGE
-    }
-    assert {binding.routing_key for binding in queue.bindings} == {
-        foo_type.routing_key,
-        bar_type.routing_key
+    assert {
+        (binding.exchange, binding.routing_key)
+        for binding in queue.bindings
+    } == {
+        (setup.EXCHANGE, foo_type.routing_key),
+        (setup.EXCHANGE, bar_type.routing_key)
     }
