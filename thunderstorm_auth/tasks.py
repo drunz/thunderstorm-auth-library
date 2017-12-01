@@ -23,7 +23,7 @@ def group_sync_task(model, db_session):
     """
     task_name = model.__ts_group_type__.task_name
 
-    @celery.task(name=task_name)
+    @celery.task(name=task_name, autoretry=(SQLAlchemyError,))
     def sync_group_data(group_uuid, members):
         """Synchronizes group membership data.
 
@@ -56,9 +56,9 @@ def group_sync_task(model, db_session):
             )
         try:
             db_session.commit()
-        except SQLAlchemyError as error:
+        except SQLAlchemyError:
             db_session.rollback()
-            raise sync_group_data.retry(exc=error)
+            raise
 
     return sync_group_data
 
