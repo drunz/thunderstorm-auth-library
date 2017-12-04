@@ -23,7 +23,7 @@ def group_sync_task(model, db_session):
     """
     task_name = model.__ts_group_type__.task_name
 
-    @celery.task(name=task_name)
+    @celery.task(name=task_name, autoretry=(SQLAlchemyError,))
     def sync_group_data(group_uuid, members):
         """Synchronizes group membership data.
 
@@ -40,18 +40,20 @@ def group_sync_task(model, db_session):
         removed = current_members - latest_members
         added = latest_members - current_members
 
-        delete_group_associations(
-            db_session,
-            model,
-            group_uuid,
-            removed
-        )
-        add_group_associations(
-            db_session,
-            model,
-            group_uuid,
-            added
-        )
+        if removed:
+            delete_group_associations(
+                db_session,
+                model,
+                group_uuid,
+                removed
+            )
+        if added:
+            add_group_associations(
+                db_session,
+                model,
+                group_uuid,
+                added
+            )
         try:
             db_session.commit()
         except SQLAlchemyError:

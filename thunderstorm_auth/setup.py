@@ -25,49 +25,66 @@ def init_group_sync_tasks(celery_app, db_session, group_models):
 
 
 def _register_task_queue(celery_app, group_models):
-    # If task_queues is None, default queue is used,
-    # manually add here so we don't exclude.
-    # Override value before calling init_group_sync_tasks to prevent this.
-    if celery_app.conf.task_queues is None:
-        celery_app.conf.task_queues = [
-            kombu.Queue(celery_app.conf.task_default_queue)
-        ]
+    """Create and register the service's auth group sync queue to the
+    ts_auth.sync exchange.
 
-    routing_keys = [
-        group_model.__ts_group_type__.routing_key
-        for group_model in group_models
-    ]
-    sync_queue = group_sync_queue(
-        celery_main=celery_app.main,
-        routing_keys=routing_keys
+    Args:
+        celery_app (Celery): The service's `Celery` app instance.
+        group_models (list): List of all the group models the service
+            subscribes to.
+    """
+    # asserts that the exchange exists
+    EXCHANGE.declare(
+        passive=True,
+        channel=celery_app.broker_connection().channel()
     )
-    celery_app.conf.task_queues.append(sync_queue)
+
+    routing_keys = _routing_keys(group_models)
+    bindings = _bindings(EXCHANGE, routing_keys)
+
+    queue = _service_task_queue(celery_app, bindings)
+
+    celery_app.conf.task_queues = celery_app.conf.task_queues or []
+    celery_app.conf.task_queues.append(queue)
 
 
-def _register_sync_tasks(celery_app, db_session, group_models):
-    for group_model in group_models:
-        sync_task = group_sync_task(
-            model=group_model,
-            db_session=db_session
-        )
-        celery_app.register_task(sync_task)
-
-
-def group_sync_queue(celery_main, routing_keys):
+def _service_task_queue(celery_app, bindings):
     """Create the queue which group sync tasks will be consumed from.
 
     Args:
-        celery_main (str): Value of `celery_app.main` for the service adding
-            the queue.
-        routing_keys (list): Routing keys with which to bind to the exchange.
+        celery_app (Celery): The service's `Celery` app instance.
 
     Returns:
         kombu.Queue: Queue that group sync tasks will be published to.
     """
-    return kombu.Queue(
-        '{celery_main}.ts_auth.group'.format(celery_main=celery_main),
-        [
-            kombu.binding(EXCHANGE, routing_key=routing_key)
-            for routing_key in routing_keys
-        ]
+    queue_name = '{}.ts_auth.group'.format(celery_app.main)
+    return kombu.Queue(queue_name, list(bindings))
+
+
+def _register_sync_tasks(celery_app, db_session, group_models):
+    """Create Celery tasks for syncing each group model and register with the
+    Celery app.
+
+    Args:
+        celery_app (Celery): The service's `Celery` app instance.
+        db_session (Session): The service's (scoped) database session
+        group_models (list): List of all the group models the service
+            subscribes to.
+    """
+    for group_model in group_models:
+        sync_task = group_sync_task(group_model, db_session)
+        celery_app.register_task(sync_task)
+
+
+def _routing_keys(group_models):
+    return (
+        group_model.__ts_group_type__.routing_key
+        for group_model in group_models
+    )
+
+
+def _bindings(exchange, routing_keys):
+    return (
+        kombu.binding(exchange, routing_key=routing_key)
+        for routing_key in routing_keys
     )
