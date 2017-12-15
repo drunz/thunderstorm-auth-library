@@ -1,5 +1,11 @@
+import logging
+
 import celery
+from celery.utils.log import get_task_logger
 from sqlalchemy.exc import SQLAlchemyError
+
+logger = get_task_logger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def group_sync_task(model, db_session):
@@ -59,6 +65,9 @@ def group_sync_task(model, db_session):
         except SQLAlchemyError:
             db_session.rollback()
             raise
+
+        logger.info('Updated group: {} - {} members added, {} removed.'
+                    .format(group_uuid, len(added), len(removed)))
 
     return sync_group_data
 
