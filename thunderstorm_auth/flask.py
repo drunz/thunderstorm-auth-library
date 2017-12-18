@@ -4,7 +4,10 @@ from flask import g
 
 from thunderstorm_auth import TOKEN_HEADER, DEFAULT_LEEWAY
 from thunderstorm_auth.decoder import decode_token
-from thunderstorm_auth.exceptions import TokenError, TokenHeaderMissing, AuthJwksNotSet, ThunderstormAuthError
+from thunderstorm_auth.exceptions import (
+    TokenError, TokenHeaderMissing, AuthJwksNotSet, ThunderstormAuthError,
+    ExpiredTokenError
+)
 from thunderstorm_auth.user import User
 
 try:
@@ -70,5 +73,8 @@ def _get_jwks():
 
 
 def _bad_token(error):
-    current_app.logger.error(error)
+    if isinstance(error, ExpiredTokenError):
+        current_app.logger.info(error)
+    else:
+        current_app.logger.error(error)
     return jsonify(message=str(error)), 401
