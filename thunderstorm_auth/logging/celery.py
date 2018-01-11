@@ -64,9 +64,9 @@ class CeleryTaskFilter(logging.Filter):
             record.request_id = get_celery_request_id(task.request)
             record.task_name = task.name
         else:
-            record.task_id = '???'
+            record.task_id = None
             record.request_id = None
-            record.task_name = '???'
+            record.task_name = None
 
         return record
 

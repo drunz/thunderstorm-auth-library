@@ -67,9 +67,9 @@ def test_celery_task_filter_with_no_task(
     record = filter.filter(record)
 
     # assert
-    assert record.task_id == '???'
+    assert record.task_id is None
     assert record.request_id is None
-    assert record.task_name == '???'
+    assert record.task_name is None
 
 
 @mock.patch('thunderstorm_auth.logging.celery.get_current_task')
@@ -86,6 +86,6 @@ def test_celery_task_filter_with_task_no_request(
     record = filter.filter(record)
 
     # assert
-    assert record.task_id == '???'
+    assert record.task_id is None
     assert record.request_id is None
-    assert record.task_name == '???'
+    assert record.task_name is None
