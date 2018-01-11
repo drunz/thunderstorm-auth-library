@@ -1,3 +1,12 @@
+"""Module for integrating JSON logging with Flask
+
+Usage:
+    >>> from flask import Flask
+    >>> from thunderstorm_auth.logging.flask import init_app as init_logging
+    >>>
+    >>> app = Flask(__init__)
+    >>> init_logging(app)
+"""
 import logging
 import os
 import uuid
@@ -14,6 +23,17 @@ __all__ = [
 
 
 def get_flask_request_id():
+    """Return the request ID from the Flask request context
+
+    If there is a Flask request context but there is no ``request_id``
+    then first we look for a ``TS-Request-ID`` header. If that is also
+    not there we generate a new string uuid4.
+
+    Importing this module will register this getter with ``get_request_id``.
+
+    Returns:
+        str: the current request ID
+    """
     if has_request_context():
         if 'request_id' not in g:
             g.request_id = request.headers.get(
@@ -26,7 +46,11 @@ _register_id_getter(get_flask_request_id)
 
 
 def init_app(app: Flask):
-    """Initialise logging on a Flask app"""
+    """Initialise logging on a Flask app
+
+    Usage:
+        >>> init_app(app)
+    """
     handler = logging.StreamHandler()
     log_format = '%(levelname)s %(message)s'
 

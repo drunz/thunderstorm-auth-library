@@ -1,3 +1,10 @@
+"""Core JSON logging module
+
+You probably do not want to use this directly.
+See:
+    thunderstorm_auth.logging.flask
+    thunderstorm_auth.logging.celery
+"""
 import datetime
 
 from pythonjsonlogger.jsonlogger import JsonFormatter as BaseJSONFormatter
@@ -67,6 +74,16 @@ def _register_id_getter(getter):
 
 
 def get_request_id():
+    """Return the current request ID
+
+    Return the current request ID from whichever ID getters have been
+    registered. An ID getter is registered when it's module is included.
+    For example; if the ``thunderstorm_auth.logging.flask`` module is imported
+    the ``get_flask_request_id`` is registered.
+
+    Returns:
+        str the current request ID
+    """
     for getter in _ID_GETTERS:
         request_id = getter()
         if request_id:

@@ -1,3 +1,23 @@
+"""Module for integrating JSON logging with Celery
+
+Usage:
+    >>> from celery import Celery
+    >>> import celery.signals
+    >>>
+    >>> from thunderstorm_auth.logging.celery import (
+    ...     on_celery_setup_logging, CeleryRequestIDTask
+    ... )
+    >>>
+    >>> celery.signals.setup_logging.connect(
+    ...     on_celery_setup_logging('service-name'),
+    ...     weak=False
+    ... )
+    >>>
+    >>> def init_app(broker_cnx):
+    >>>     celery_app = Celery('name', broker=broker_cnx)
+    >>>     celery_app.Task = CeleryRequestIDTask
+    >>>     return celery_app
+"""
 import logging
 
 import celery
@@ -11,6 +31,15 @@ _CELERY_X_HEADER = 'x_request_id'
 
 
 def get_celery_request_id(request=None):
+    """Return the request ID from the current Celery request
+
+    If there is no request then return None.
+
+    Importing this module will register this getter with ``get_request_id``.
+
+    Returns:
+        str or None: the current request ID
+    """
     if not request:
         task = get_current_task()
         if task and task.request:
@@ -46,7 +75,8 @@ class CeleryRequestIDTask(CeleryTask):
     """Celery Task that adds request ID header
 
     This adds the request ID as a celery header so that it can be logged
-    in celery task logs
+    in celery task logs. Use it by setting it to the `Task` attribute of
+    your celery app.
     """
     def apply_async(self, *args, **kwargs):
         kwargs.setdefault('headers', {})
@@ -60,7 +90,8 @@ def on_celery_setup_logging(service_name):
     """Set up celery logging
 
     This should be hooked up to the celery `setup_logging` signal to
-    override celery's logging
+    override celery's logging. It must be hooked up with ``weak=False``
+    to avoid the anonymous function getting garbage collected.
     """
     def _get_celery_handler(log_format):
         handler = logging.StreamHandler()
