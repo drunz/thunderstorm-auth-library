@@ -1,4 +1,6 @@
-cryptography>=2.0.3,<3
 celery>=4.0,<4.2
+cryptography>=2.0.3,<3
 pyjwt>=1.5.2,<2
+python-json-logger==0.1.8
+requests==2.18.4
 sqlalchemy>=1.1,<1.2
