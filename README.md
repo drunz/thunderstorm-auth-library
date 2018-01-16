@@ -126,6 +126,15 @@ following two lines:
     COPY thunderstorm-auth-library /var/app/thunderstorm-auth-library
     RUN pip install -e file:/var/app/thunderstorm-auth-library
 
+Avoiding Exchange Not Found errors in tests
+-------------------------------------------
+
+By default an Exchange Not Found error is raised by `init_group_sync_tasks` if
+the exchange does not exist. This is useful in deployed environments where
+we want to avoid an app silently not binding to the correct exchange. However,
+this causes tests to fail because there is no exchange there. To avoid this
+set `ensure_exchange_exists` to `False`.
+
 
 Creating a new release
 ----------------------
