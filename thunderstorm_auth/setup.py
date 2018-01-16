@@ -6,7 +6,10 @@ from thunderstorm_auth.tasks import group_sync_task
 EXCHANGE = kombu.Exchange('ts_auth.group')
 
 
-def init_group_sync_tasks(celery_app, db_session, group_models):
+def init_group_sync_tasks(
+    celery_app, db_session, group_models,
+    ensure_exchange_exists=True
+):
     """
     Initialize a Celery app with a queue and sync tasks for auth group models.
 
@@ -19,12 +22,16 @@ def init_group_sync_tasks(celery_app, db_session, group_models):
         celery_app (Celery): Celery app to register the sync tasks with.
         db_session (Session): Database session used to sync the model records.
         group_models (list): The Thunderstorm auth group models to synchronize.
+        ensure_exchange_exists (bool): Whether to error if exchange does not
+                                       exist.
     """
-    _register_task_queue(celery_app, group_models)
+    _register_task_queue(
+        celery_app, group_models, ensure_exchange_exists
+    )
     _register_sync_tasks(celery_app, db_session, group_models)
 
 
-def _register_task_queue(celery_app, group_models):
+def _register_task_queue(celery_app, group_models, ensure_exchange_exists):
     """Create and register the service's auth group sync queue to the
     ts_auth.sync exchange.
 
@@ -35,7 +42,7 @@ def _register_task_queue(celery_app, group_models):
     """
     # asserts that the exchange exists
     EXCHANGE.declare(
-        passive=True,
+        passive=ensure_exchange_exists,
         channel=celery_app.broker_connection().channel()
     )
 
