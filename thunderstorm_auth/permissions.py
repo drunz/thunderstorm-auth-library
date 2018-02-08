@@ -1,5 +1,4 @@
 from collections.abc import Mapping
-from uuid import uuid4
 
 from sqlalchemy import Column, String, Boolean
 from sqlalchemy.dialects.postgresql import UUID
@@ -7,6 +6,9 @@ from sqlalchemy.dialects.postgresql import UUID
 from thunderstorm_auth.exceptions import (
     InsufficientPermissions, BrokenTokenError
 )
+
+
+_REGISTERED_PERMISSIONS = set()
 
 
 def validate_permission(token_data, service_name, permission):
@@ -28,6 +30,68 @@ def validate_permission(token_data, service_name, permission):
         raise BrokenTokenError()
     elif permission not in token_data['permissions'].get(service_name, []):
         raise InsufficientPermissions()
+
+
+def register_permission(permission):
+    """Register a permission with the global store
+
+    This is used to keep track of all permission strings used in the service.
+
+    Args:
+        permission (str): The permission string to register
+    """
+    _REGISTERED_PERMISSIONS.add(permission)
+
+
+def get_registered_permissions():
+    """Return all the permission strings registered so far
+
+    Returns:
+        set
+    """
+    return _REGISTERED_PERMISSIONS
+
+
+def get_permissions_info(db_session, permission_model):
+    """Get information about permissions for this service
+
+    Includes;
+        - permissions currently being used on routes
+        - permissions in the database
+        - permissions that need to be added (on routes but not in database)
+        - permissions that need to be deleted (not on routes but in database)
+        - permissions that need to be undeleted (on routes but deleted in
+          database)
+
+    Returns:
+        dict
+    """
+    registered_permissions = get_registered_permissions()
+    db_permissions = db_session.query(permission_model).all()
+
+    to_insert = []
+    to_undelete = []
+    to_delete = [perm.uuid for perm in db_permissions]
+
+    for reg_perm in registered_permissions:
+        found = False
+        for db_perm in db_permissions:
+            if db_perm.permission == reg_perm:
+                found = True
+                to_delete.remove(db_perm.uuid)
+                if db_perm.is_deleted:
+                    to_undelete.append(db_perm.uuid)
+
+        if not found:
+            to_insert.append(reg_perm)
+
+    return {
+        'registered': registered_permissions,
+        'db': db_permissions,
+        'to_insert': to_insert,
+        'to_undelete': to_undelete,
+        'to_delete': to_delete,
+    }
 
 
 def create_permission_model(base):
@@ -55,10 +119,8 @@ def create_permission_model(base):
 class Permission:
     __tablename__ = 'permission'
 
-    uuid = Column(
-        UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4())
-    )
+    uuid = Column(UUID(as_uuid=True), primary_key=True)
     service_name = Column(String(255), nullable=False)
     permission = Column(String(255), nullable=False, unique=True)
-    is_deleted = Column(Boolean(), nullable=False, default=False)
-    is_sent = Column(Boolean(), nullable=False, default=False)
+    is_deleted = Column(Boolean(), nullable=False, server_default='false')
+    is_sent = Column(Boolean(), nullable=False, server_default='false')

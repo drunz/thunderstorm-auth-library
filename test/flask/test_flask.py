@@ -40,7 +40,7 @@ def valid_token_with_perm_wrong_service(private_key, key_id):
 def flask_app(jwk_set):
     app = flask.Flask('test_app')
     app.config['TS_AUTH_JWKS'] = jwk_set
-    app.config['TS_AUTH_SERVICE_NAME'] = 'test-service'
+    app.config['TS_SERVICE_NAME'] = 'test-service'
 
     @app.route('/')
     @ts_auth_required

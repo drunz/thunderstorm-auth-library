@@ -1,10 +1,12 @@
 from functools import wraps
+import uuid
 
 from flask import g
+import click
 
 from thunderstorm_auth import TOKEN_HEADER, DEFAULT_LEEWAY
 from thunderstorm_auth.decoder import decode_token
-from thunderstorm_auth.permissions import validate_permission
+from thunderstorm_auth import permissions
 from thunderstorm_auth.exceptions import (
     TokenError, TokenHeaderMissing, AuthJwksNotSet, ThunderstormAuthError,
     ExpiredTokenError, InsufficientPermissions
@@ -39,6 +41,9 @@ def ts_auth_required(func=None, *, with_permission=None):
         raise ThunderstormAuthError(
             'Cannot decorate Flask route as Flask is not installed.'
         )
+
+    if with_permission is not None:
+        permissions.register_permission(with_permission)
 
     def wrapper(func):
         @wraps(func)
@@ -91,8 +96,8 @@ def _get_jwks():
 
 def _validate_permission(token_data, permission):
     if permission:
-        service_name = current_app.config['TS_AUTH_SERVICE_NAME']
-        validate_permission(token_data, service_name, permission)
+        service_name = current_app.config['TS_SERVICE_NAME']
+        permissions.validate_permission(token_data, service_name, permission)
 
 
 def _bad_token(error):
@@ -102,3 +107,112 @@ def _bad_token(error):
         current_app.logger.error(error)
     status_code = 403 if isinstance(error, InsufficientPermissions) else 401
     return jsonify(message=str(error)), status_code
+
+
+def init_auth(app, db_session, permission_model):
+    group = app.cli.group(name='permissions')(_permissions)
+    group.command(name='list')(
+        _list_permissions(db_session, permission_model)
+    )
+    group.command(name='update')(
+        _update_permissions(app, db_session, permission_model)
+    )
+
+
+def _permissions():
+    """Manage auth permissions"""
+
+
+def _needs_update(perms):
+    return any(
+        perms[key] for key in ['to_insert', 'to_undelete', 'to_delete']
+    )
+
+
+def _list_permissions(db_session, permission_model):
+    def _action():
+        """List permissions used in this service"""
+        perms = permissions.get_permissions_info(db_session, permission_model)
+
+        click.echo('Permissions in use')
+        click.echo('-----------------')
+        for permission in perms['registered']:
+            click.echo(permission)
+
+        click.echo('')
+        click.echo('Permissions in DB')
+        click.echo('-----------------')
+        click.echo(f'{"uuid":38} {"permission":15} {"sent":6} {"deleted":6}')
+        for p in perms['db']:
+            click.echo(
+                f'{str(p.uuid):38} {p.permission:15} '
+                f'{p.is_sent}  {p.is_deleted}'
+            )
+
+        if _needs_update(perms):
+            click.echo(
+                '\nAN UPDATE IS NEEDED RUN: \n> flask permissions update'
+            )
+            raise SystemExit(1)
+
+    return _action
+
+
+def _update_permissions(app, db_session, permission_model):
+    def _action():
+        """Create a migration to update permissions if needed"""
+        service_name = app.config['TS_SERVICE_NAME']
+        perms = permissions.get_permissions_info(db_session, permission_model)
+
+        if _needs_update(perms):
+            from alembic.config import Config
+            from alembic.script import ScriptDirectory
+            from alembic.operations import ops
+            from alembic.util import rev_id as alembic_rev_id
+            from alembic.autogenerate.api import render_python_code
+
+            config = Config(file_='alembic.ini', ini_section='alembic')
+            script_directory = ScriptDirectory.from_config(config)
+            upgrade = ops.UpgradeOps(
+                [
+                    ops.ExecuteSQLOp(
+                        f"INSERT INTO permission (uuid, service_name, permission) VALUES ('{str(uuid.uuid4())}'::uuid, '{service_name}', '{permission}')"  # noqa
+                    ) for permission in perms['to_insert']
+                ] + [
+                    ops.ExecuteSQLOp(
+                        f"UPDATE permission SET is_deleted=false, is_sent=false WHERE uuid = '{p_uuid}'::uuid"  # noqa
+                    ) for p_uuid in perms['to_undelete']
+                ] + [
+                    ops.ExecuteSQLOp(
+                        f"UPDATE permission SET is_deleted=true, is_sent=false WHERE uuid = '{p_uuid}'::uuid"  # noqa
+                    ) for p_uuid in perms['to_delete']
+                ]
+            )
+            downgrade = ops.DowngradeOps(
+                [
+                    ops.ExecuteSQLOp(
+                        f"DELETE FROM permission WHERE permission = '{permission}'"  # noqa
+                    ) for permission in perms['to_insert']
+                ] + [
+                    ops.ExecuteSQLOp(
+                        f"UPDATE permission SET is_deleted=true, is_sent=false WHERE uuid = '{p_uuid}'::uuid"  # noqa
+                    ) for p_uuid in perms['to_undelete']
+                ] + [
+                    ops.ExecuteSQLOp(
+                        f"UPDATE permission SET is_deleted=false, is_sent=false WHERE uuid = '{p_uuid}'::uuid"  # noqa
+                    ) for p_uuid in perms['to_delete']
+                ]
+            )
+            kwargs = {
+                upgrade.upgrade_token: render_python_code(upgrade),
+                downgrade.downgrade_token: render_python_code(downgrade),
+            }
+            script_directory.generate_revision(
+                alembic_rev_id(),
+                'updating auth permissions',
+                refresh=True,
+                head='head', splice=None,
+                **kwargs
+            )
+
+    return _action
