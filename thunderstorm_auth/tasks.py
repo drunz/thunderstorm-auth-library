@@ -1,6 +1,7 @@
 import logging
 
 import celery
+from celery.execute import send_task
 from celery.utils.log import get_task_logger
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -136,3 +137,45 @@ def add_group_associations(db_session, model, group_uuid, added):
         }
         for member_id in added
     ])
+
+
+PERMISSIONS_NEW = 'permissions.new'
+PERMISSIONS_DELETE = 'permissions.delete'
+MESSAGING_EXCHANGE = 'ts.messaging'
+
+
+def permission_sync_task(Permission, db_session):
+    @celery.task(name='ts_auth.permissions.sync')
+    def sync_permissions():
+        permissions = db_session.query(
+            Permission
+        ).filter(
+            Permission.is_sent == False  # noqa
+        )
+
+        for permission in permissions:
+            if permission.is_deleted:
+                logger.info(f'deleting permission {permission.uuid}')
+                send_task(
+                    PERMISSIONS_DELETE,
+                    (permission.uuid,),
+                    exchange=MESSAGING_EXCHANGE,
+                    routing_key=PERMISSIONS_DELETE,
+                )
+            else:
+                logger.info(f'adding permission {permission.uuid}')
+                send_task(
+                    PERMISSIONS_NEW,
+                    (
+                        permission.uuid,
+                        permission.service_name,
+                        permission.permission
+                    ),
+                    exchange=MESSAGING_EXCHANGE,
+                    routing_key=PERMISSIONS_NEW,
+                )
+            permission.is_sent = True
+            db_session.add(permission)
+            db_session.commit()
+
+    return sync_permissions
