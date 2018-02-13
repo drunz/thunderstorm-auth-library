@@ -139,14 +139,18 @@ def _list_permissions(db_session, permission_model):
         for permission in perms['registered']:
             click.echo(permission)
 
+        line_tpl = '{:38} {:15} {:6} {:6}'
         click.echo('')
         click.echo('Permissions in DB')
         click.echo('-----------------')
-        click.echo(f'{"uuid":38} {"permission":15} {"sent":6} {"deleted":6}')
+        click.echo(
+            line_tpl.format('uuid', 'permission', 'sent', 'deleted')
+        )
         for p in perms['db']:
             click.echo(
-                f'{str(p.uuid):38} {p.permission:15} '
-                f'{p.is_sent}  {p.is_deleted}'
+                line_tpl.format(
+                    str(p.uuid), p.permission, p.is_sent, p.is_deleted
+                )
             )
 
         if _needs_update(perms):
@@ -171,35 +175,68 @@ def _update_permissions(app, db_session, permission_model):
             from alembic.util import rev_id as alembic_rev_id
             from alembic.autogenerate.api import render_python_code
 
+            insert_tpl = (
+                "INSERT INTO permission "
+                "(uuid, service_name, permission) VALUES "
+                "('{uuid}'::uuid, '{service_name}', '{permission}')"
+            )
+            update_tpl = (
+                "UPDATE permission "
+                "SET is_sent = false, is_deleted = {is_deleted} "
+                "WHERE uuid = '{uuid}'::uuid"
+            )
+            delete_tpl = (
+                "DELETE FROM permission "
+                "WHERE permission = '{permission}'"
+            )
+
             config = Config(file_='alembic.ini', ini_section='alembic')
             script_directory = ScriptDirectory.from_config(config)
             upgrade = ops.UpgradeOps(
                 [
                     ops.ExecuteSQLOp(
-                        f"INSERT INTO permission (uuid, service_name, permission) VALUES ('{str(uuid.uuid4())}'::uuid, '{service_name}', '{permission}')"  # noqa
+                        insert_tpl.format(
+                            uuid=str(uuid.uuid4()),
+                            service_name=service_name,
+                            permission=permission
+                        )
                     ) for permission in perms['to_insert']
                 ] + [
                     ops.ExecuteSQLOp(
-                        f"UPDATE permission SET is_deleted=false, is_sent=false WHERE uuid = '{p_uuid}'::uuid"  # noqa
+                        update_tpl.format(
+                            is_deleted='false',
+                            uuid=p_uuid
+                        )
                     ) for p_uuid in perms['to_undelete']
                 ] + [
                     ops.ExecuteSQLOp(
-                        f"UPDATE permission SET is_deleted=true, is_sent=false WHERE uuid = '{p_uuid}'::uuid"  # noqa
+                        update_tpl.format(
+                            is_deleted='true',
+                            uuid=p_uuid
+                        )
                     ) for p_uuid in perms['to_delete']
                 ]
             )
             downgrade = ops.DowngradeOps(
                 [
                     ops.ExecuteSQLOp(
-                        f"DELETE FROM permission WHERE permission = '{permission}'"  # noqa
+                        delete_tpl.format(
+                            permission=permission
+                        )
                     ) for permission in perms['to_insert']
                 ] + [
                     ops.ExecuteSQLOp(
-                        f"UPDATE permission SET is_deleted=true, is_sent=false WHERE uuid = '{p_uuid}'::uuid"  # noqa
+                        update_tpl.format(
+                            is_deleted='true',
+                            uuid=p_uuid
+                        )
                     ) for p_uuid in perms['to_undelete']
                 ] + [
                     ops.ExecuteSQLOp(
-                        f"UPDATE permission SET is_deleted=false, is_sent=false WHERE uuid = '{p_uuid}'::uuid"  # noqa
+                        update_tpl.format(
+                            is_deleted='false',
+                            uuid=p_uuid
+                        )
                     ) for p_uuid in perms['to_delete']
                 ]
             )

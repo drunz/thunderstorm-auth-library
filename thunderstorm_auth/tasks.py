@@ -155,7 +155,7 @@ def permission_sync_task(Permission, db_session):
 
         for permission in permissions:
             if permission.is_deleted:
-                logger.info(f'deleting permission {permission.uuid}')
+                logger.info('deleting permission {}'.format(permission.uuid))
                 send_task(
                     PERMISSIONS_DELETE,
                     (permission.uuid,),
@@ -163,7 +163,7 @@ def permission_sync_task(Permission, db_session):
                     routing_key=PERMISSIONS_DELETE,
                 )
             else:
-                logger.info(f'adding permission {permission.uuid}')
+                logger.info('adding permission {}'.format(permission.uuid))
                 send_task(
                     PERMISSIONS_NEW,
                     (
