@@ -4,10 +4,12 @@ __pycache__
 .venv/
 venv/
 .cache
+.pytest_cache
 
 .coverage
 coverage.xml
 results.xml
+/htmlcov/
 
 build/
 dist/
