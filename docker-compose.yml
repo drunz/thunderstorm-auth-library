@@ -13,6 +13,15 @@ services:
       - ./Makefile:/src/Makefile
       - ./.flake8:/src/.flake8
 
+  dev:
+    build:
+      dockerfile: Dockerfile.dev
+      context: .
+    depends_on:
+      - postgres
+    volumes:
+      - .:/src/thunderstorm_auth
+
   postgres:
     image: postgres:9.6
     environment:

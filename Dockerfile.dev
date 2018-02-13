@@ -1,0 +1,10 @@
+FROM python:3.6
+
+WORKDIR /src/thunderstorm_auth
+
+COPY . .
+
+RUN pip install -e .[flask]
+RUN pip install -r requirements-dev.txt
+
+CMD "pytest -s test"

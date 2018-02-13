@@ -1,6 +1,7 @@
 import kombu
+from celery import signals
 
-from thunderstorm_auth.tasks import group_sync_task
+from thunderstorm_auth.tasks import group_sync_task, permission_sync_task
 
 
 EXCHANGE = kombu.Exchange('ts_auth.group')
@@ -95,3 +96,14 @@ def _bindings(exchange, routing_keys):
         kombu.binding(exchange, routing_key=routing_key)
         for routing_key in routing_keys
     )
+
+
+@signals.worker_ready.connect
+def do_ready(sender, **kwargs):
+    if 'ts_auth.permissions.sync' in sender.app.tasks:
+        sender.app.tasks['ts_auth.permissions.sync'].delay()
+
+
+def init_permissions(celery_app, db_session, permission_model):
+    task = permission_sync_task(permission_model, db_session)
+    celery_app.register_task(task)
