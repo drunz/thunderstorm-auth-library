@@ -1,10 +1,13 @@
+import itertools
+
 import kombu
 from celery import signals
 
 from thunderstorm_auth.tasks import group_sync_task, permission_sync_task
 
 
-EXCHANGE = kombu.Exchange('ts_auth.group')
+LEGACY_EXCHANGE = kombu.Exchange('ts_auth.group')
+EXCHANGE = kombu.Exchange('ts.messaging')
 
 
 def init_group_sync_tasks(
@@ -42,13 +45,20 @@ def _register_task_queue(celery_app, group_models, ensure_exchange_exists):
             subscribes to.
     """
     # asserts that the exchange exists
+    LEGACY_EXCHANGE.declare(
+        passive=ensure_exchange_exists,
+        channel=celery_app.broker_connection().channel()
+    )
     EXCHANGE.declare(
         passive=ensure_exchange_exists,
         channel=celery_app.broker_connection().channel()
     )
 
     routing_keys = _routing_keys(group_models)
-    bindings = _bindings(EXCHANGE, routing_keys)
+    bindings = itertools.chain(
+        _bindings(EXCHANGE, routing_keys),
+        _bindings(LEGACY_EXCHANGE, routing_keys),
+    )
 
     queue = _service_task_queue(celery_app, bindings)
 
