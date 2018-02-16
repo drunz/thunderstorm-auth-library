@@ -37,7 +37,7 @@ def celery_app(group_types):
 
 
 def test_exchange_name():
-    assert setup.EXCHANGE.name == 'ts_auth.group'
+    assert setup.EXCHANGE.name == 'ts.messaging'
 
 
 def test_init_group_sync_tasks(celery_app, models, group_types):
