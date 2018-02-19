@@ -89,11 +89,133 @@ Server: Werkzeug/0.12.2 Python/3.5.3
 }
 ```
 
+#### Permissions
+
+Each service owns it's permissions so the first thing that must be done to
+start integrating permissions is to add a `Permission` model to their database.
+At the moment we only support SQLAlchemy models.
+
+```python
+from thunderstorm_auth.permissions import create_permission_model
+
+Permission = create_permission_model(Base)
+```
+
+Once you have a permission model you can integrate it with your flask app
+to give you access to the permission management CLI commands.
+
+```python
+from thunderstorm_auth.flask import init_auth
+
+from .database import db
+from .models import Permission
+
+
+def init_app(app):
+    """Flask app initialisation and bootstrap"""
+    init_auth(app, db.session, Permission)
+```
+
+Now that this is integrated you will be able to manage your permissions from
+the flask CLI (we haven't created any permissions yet so there won't be any).
+
+```shell
+> docker-compose exec myapp flask permissions --help
+```
+
+Finally we need to integrate the sync task with our celery app so that our
+permissions can be synced up to the user service.
+
+```python
+from thunderstorm_auth.setup import init_permissions
+
+from .database import db
+from .models import Permission
+
+def init_celery(celery_app):
+    """Celery app initialisation"""
+    init_permissions(celery_app, db.session, Permission)
+```
+
+##### Defining permissions
+
+Now that we have the permissions model, CLI and syncing fully integrated we
+can start using permissions.
+
+To require a specific permission for a flask route add the `with_permission`
+keyword argument to the `ts_auth_required` route decorator.
+
+```python
+from thunderstorm_auth.flask import ts_auth_required
+
+
+@myapp.route('/foo/bar', methods=['GET'])
+@ts_auth_required(with_permission='special')
+def get_foo_bar():
+    ...
+```
+
+Now a request to the `/foo/bar` route will only be allowed if it has a valid
+authentication token and that token contains the `special` permission for your
+service. In order for that to be possible the user service needs to be made
+aware of this new permission.
+
+If you're using flask you can use the flask CLI to manage your service's
+permissions. First let's see our permissions.
+
+```shell
+> docker-compose exec myapp flask permissions list
+Permissions in use
+------------------
+special
+
+Permissions in DB
+-----------------
+uuid                                   permission      sent   deleted
+
+AN UPDATE IS NEEDED RUN:
+flask permissions update
+```
+
+This is telling us that we have one permission in use (`special`) but no
+permissions in our database. We need to create a migration to ensure the
+appropriate permission record is created in the database. If we're using
+alembic we can generate a migration with the CLI
+
+```shell
+> docker-compose exec myapp flask permissions update
+Generating /var/app/migrations/versions/cab5c9a70124_updating_auth_permissions.py ... done
+```
+
+If we run `alembic upgrade` and then `permissions list` again we can see our
+permission has been created but not yet sent to the user service. Next time
+we start our celery app it will automatically run a task that will send
+any unsent permissions up to the user service.
+
+```shell
+> docker-compose exec myapp flask permissions upgrade
+Permissions in use
+------------------
+special
+
+Permissions in DB
+-----------------
+uuid                                   permission      sent   deleted
+5c0b17c4-1595-11e8-8c3f-4a0004692f50   special              0      0
+```
+
+##### Deployment
+
+When restricting access to a resource we usually want to add the permission to
+the users that need access to the resource before adding the restriction so as
+to avoid any downtime where authorised users cannot access the resource. In
+order to achieve this we must ensure that the migration is deployed to an
+environment before the decorator change.
 
 ## Exceptions
 
-The exception `AuthJwksNotSet` will be raised when `TS_AUTH_JWKS` is missing from the
-Flask config.
+The exception `AuthJwksNotSet` will be raised when `TS_AUTH_JWKS` is missing
+from the Flask config.
 
 Both Flask and Falcon raise the following exceptions:
 `ExpiredTokenError` - If the token supplied for decoding has expired.
