@@ -39,7 +39,7 @@ def test_endpoint_returns_401_with_expired_token(expired_token, flask_app):
 def test_endpoint_returns_200_when_expired_token_falls_within_leeway(
         flask_app, expired_token):
     with flask_app.app_context():
-        flask_app.config['TS_AUTH_LEEWAY'] = 3600
+        flask_app.config['TS_AUTH_LEEWAY'] = 3601
         headers = {'X-Thunderstorm-Key': expired_token}
 
         response = flask_app.test_client().get('/', headers=headers)
