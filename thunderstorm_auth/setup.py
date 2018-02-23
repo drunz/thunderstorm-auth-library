@@ -115,5 +115,13 @@ def do_ready(sender, **kwargs):
 
 
 def init_permissions(celery_app, db_session, permission_model):
+    """
+    Initialize a Celery app with the permission syncing task
+
+    Args:
+        celery_app (Celery): Celery app to register the sync task with
+        db_session (Session): SQLAlchemy session
+        permission_model (Permission): SQLAlchemy declarative permissions model
+    """
     task = permission_sync_task(permission_model, db_session)
     celery_app.register_task(task)
