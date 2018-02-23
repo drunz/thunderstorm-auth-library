@@ -8,6 +8,11 @@ provided by the
 It also provides access to other common tools such as logging until we find a
 better place for them.
 
+This document provides instructions and examples for
+[Flask](https://flask.readthedocs.io/en/stable/) apps. For
+[Falcon](https://falconframework.org/) apps see the [Falcon doc](./docs/falcon.md)
+
+
 ## Contents
 
 - [Installation](#installation)
@@ -43,9 +48,8 @@ See [Thunderstorm User Service](https://github.com/artsalliancemedia/thunderstor
 
 ### Basic usage
 
-#### Flask
-
-The following decorator will make your views require the JWT issued by the `thunderstorm-user-service`.
+The following decorator will make your views require the JWT issued by the
+`thunderstorm-user-service`.
 
 ```python
 from thunderstorm_auth.flask import ts_auth_required
@@ -56,8 +60,8 @@ def hello():
     return jsonify({'message': 'hello world'})
 ```
 
-When making a request to this endpoint, you must supply your JWT in a HTTP header called
-`X-Thunderstorm-Key`.
+When making a request to this endpoint, you must supply your JWT in a HTTP
+header called `X-Thunderstorm-Key`.
 
 For example:
 
@@ -110,7 +114,6 @@ Each service owns it's permissions so the first thing that must be done to
 start integrating permissions is to add a `Permission` model to their database.
 At the moment we only support SQLAlchemy models.
 
-#### Flask
 ```python
 from thunderstorm_auth.permissions import create_permission_model
 
@@ -220,13 +223,137 @@ uuid                                   permission      sent   deleted
 5c0b17c4-1595-11e8-8c3f-4a0004692f50   special              0      0
 ```
 
-##### Deployment
+#### Deploying permissions
 
 When restricting access to a resource we usually want to add the permission to
 the users that need access to the resource before adding the restriction so as
 to avoid any downtime where authorised users cannot access the resource. In
 order to achieve this we must ensure that the migration is deployed to an
 environment before the decorator change.
+
+## Logging
+
+Logging shouldn't really live in this library but until we have a better
+place for it, here is where it lives. 
+
+The logging facility emits JSON formatted logs with some standardised fields
+pulled out to make searching across services easier. This format should be
+used for anything that is on the request path and emits logs that we can control.
+
+| Field      | Description | Example |
+| ---------- | ----------- | ------- |
+| `service`  | The service name, this should uniquely identify the service across thunderstorm. Set it with the `TS_SERVICE_NAME` environment variable. | `agent-service` |
+| `log_type` | The facility the logs came from, usually either `flask`, `nginx` or `celery` | `flask` |
+| `request_id` | A unique identifier for a request across services and facilities. See [Request IDs](#request-ids) | `1f4ea2be-18b6-11e8-a5c1-4a0004692f50` |
+| `timestamp` | A UTC ISO8601 timestamp. | `2018-02-23T16:26:40+00:00` |
+| `message` | Standard log message field | anything |
+| `method` | HTTP request method string | `GET` |
+| `url` | HTTP request URL | `http://172.31.105.16/version` |
+| `status` | HTTP status code | `200` |
+| `task_name` | Celery task name | `check_flm_status` |
+| `task_id` | Celery task id | `e7469c1e-019d-405a-b086-8a6725925292` |
+
+### Request IDs
+
+Request IDs are identifiers that can be used to see all log messages associated
+with a given request across all services that properly handle them. A request
+ID is generated when a log message is created if there is no existing request
+ID. An existing request ID can come from the `TS-Request-ID` HTTP header or
+the `x_request_id` Celery header. If the [Celery task class](./thunderstorm_auth/logging/celery.py#L74)
+and [requests wrappers](./thunderstorm_auth/logging/requests.py) are used
+these request IDs will be propagated automatically.
+
+### Flask
+
+```python
+from thunderstorm_auth.logging.flask import init_app as init_logging
+
+def init_flask(flask_app):
+    init_logging(flask_app)
+```
+
+### Celery
+
+```python
+import celery.signals
+
+from thunderstorm_auth.logging.celery import (
+    CeleryRequestIDTask,
+    on_celery_setup_logging,
+)
+
+celery.signals.setup_logging.connect(
+  on_celery_setup_logging('agent-service'),
+  weak=False
+)
+
+def init_celery(celery_app):
+    celery_app.Task = CeleryRequestIDTask
+
+    # If you need to extend task yourself ensure you do it on top
+    # of CeleryRequestIDTask
+    class MyTask(CeleryRequestIDTask):
+        pass
+    celery_app.Task = CeleryRequestIDTask
+```
+
+### Nginx
+
+```nginx
+http {
+  ...
+  log_format json_combined escape=json '{ "log_type": "nginx", '
+    '"service": "agent-service", '
+    '"timestamp": "$time_iso8601", '
+    '"msec": "$msec", '
+    '"request_time": "$request_time", '
+    '"request_length": "$request_length", '
+    '"request_id": "$upstream_http_ts_request_id", '
+    '"request": "$request", '
+    '"message": "$request $status $request_time", '
+    '"status": "$status", '
+    '"amzn_trace_id": "$http_x_amzn_trace_id", '
+    '"user_agent": "$http_user_agent" }';
+	...
+}
+```
+
+### Gunicorn
+
+Basically disable logging ready for the handler to be overriden by the flask
+logging setup. Once `19.8.0` comes out we'll be able to revisit this.
+
+```ini
+[loggers]
+keys=root, gunicorn
+
+[handlers]
+keys=null
+
+[formatters]
+keys=
+
+[logger_root]
+level=INFO
+handlers=null
+
+[logger_gunicorn]
+level=INFO
+handlers=null
+propagate=0
+qualname=gunicorn
+
+# disable Gunicorn logs until 19.8.0
+# see: https://github.com/benoitc/gunicorn/issues/1634
+# and: https://github.com/benoitc/gunicorn/commit/610596c9d93b3c9086becd6212ab4ba81d476dc4
+[handler_null]
+class=NullHandler
+args=(1,)
+```
+
+### Requests
+
+Simply import `thunderstorm_auth.logging.requests` instead of `requests`.
 
 ## Exceptions
 
