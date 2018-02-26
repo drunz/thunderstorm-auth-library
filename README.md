@@ -26,6 +26,7 @@ This document provides instructions and examples for
 
 
 ## Installation
+\[[Falcon](./docs/falcon.md#installation)\]
 
 Install this library from a tarball on Github.
 Optionally add the web framework of choice as an extra to install extra
@@ -47,6 +48,7 @@ config. The JWKs stored in this variable will be used for decoding JWTs.
 See [Thunderstorm User Service](https://github.com/artsalliancemedia/thunderstorm-user-service#using-your-jwt).
 
 ### Basic usage
+\[[Falcon](./docs/falcon.md#basic-usage)\]
 
 The following decorator will make your views require the JWT issued by the
 `thunderstorm-user-service`.
@@ -59,6 +61,19 @@ from thunderstorm_auth.flask import ts_auth_required
 def hello():
     return jsonify({'message': 'hello world'})
 ```
+
+The authenticated user object can be accessed through the `flask.g`.
+
+```python
+from flask import g
+
+@route('/hello', methods=['GET'])
+@ts_auth_required
+def hello():
+    return jsonify({'message': f'hello {g.user}'})
+```
+
+The user object has three properties, `username`, `permissions` and `groups`.
 
 When making a request to this endpoint, you must supply your JWT in a HTTP
 header called `X-Thunderstorm-Key`.
