@@ -405,7 +405,7 @@ set `ensure_exchange_exists` to `False`.
 
 ## Testing
 
-Testing accross mutiple Python versions is managed by [tox](https://tox.readthedocs.io/en/latest/).
+Testing across mutiple Python versions is managed by [tox](https://tox.readthedocs.io/en/latest/).
 Run them with docker-compose.
 
 ```bash
