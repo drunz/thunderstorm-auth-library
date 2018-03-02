@@ -370,7 +370,7 @@ args=(1,)
 
 Simply import `thunderstorm_auth.logging.requests` instead of `requests`.
 
-## Exceptions
+## Exceptions
 
 The exception `AuthJwksNotSet` will be raised when `TS_AUTH_JWKS` is missing
 from the Flask config.
