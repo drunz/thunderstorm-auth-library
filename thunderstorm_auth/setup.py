@@ -95,17 +95,17 @@ def _register_sync_tasks(celery_app, db_session, group_models):
 
 
 def _routing_keys(group_models):
-    return (
+    return [
         group_model.__ts_group_type__.routing_key
         for group_model in group_models
-    )
+    ]
 
 
 def _bindings(exchange, routing_keys):
-    return (
+    return [
         kombu.binding(exchange, routing_key=routing_key)
         for routing_key in routing_keys
-    )
+    ]
 
 
 @signals.worker_ready.connect
