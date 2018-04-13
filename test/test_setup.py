@@ -70,5 +70,7 @@ def test_init_group_sync_queue(celery_app, models, group_types):
         for binding in queue.bindings
     } == {
         (setup.EXCHANGE, foo_type.routing_key),
-        (setup.EXCHANGE, bar_type.routing_key)
+        (setup.EXCHANGE, bar_type.routing_key),
+        (setup.LEGACY_EXCHANGE, foo_type.routing_key),
+        (setup.LEGACY_EXCHANGE, bar_type.routing_key),
     }
