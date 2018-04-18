@@ -25,8 +25,9 @@ node('aam-identity-prodcd') {
 
     try {
         stage('Test') {
-            // run unit tests
-            sh 'docker-compose run tox'
+            // run unit tests, tox runs make test codacy
+            // CODACY_PROJECT_TS_AUTH_LIB_TOKEN is a global set in jenkins
+            sh "docker-compose run -e CODACY_PROJECT_TOKEN=${env.CODACY_PROJECT_TS_AUTH_LIB_TOKEN} tox"
             junit 'test_results/results.xml'
             sh 'docker-compose down'
         }

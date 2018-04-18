@@ -1,4 +1,7 @@
-.PHONY: requirements requirements-dev lint test build clean dist release
+.PHONY: requirements requirements-dev lint test build clean dist release codacy
+
+
+CODACY_PROJECT_TOKEN?=fake
 
 
 requirements:
@@ -40,3 +43,6 @@ release: dist
 		--tag v$$(python setup.py --version) \
 		--name thunderstorm-auth-lib-$$(python setup.py --version).tar.gz \
 		--file dist/thunderstorm-auth-lib-$$(python setup.py --version).tar.gz
+
+codacy: test
+	python-codacy-coverage -r coverage.xml

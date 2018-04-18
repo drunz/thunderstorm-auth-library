@@ -4,6 +4,12 @@ WORKDIR /src/thunderstorm_auth
 
 COPY . .
 
+RUN apt-get update && \
+	apt-get -y --no-install-recommends install \
+		build-essential \
+		git \
+	&& apt-get clean && rm -rf /var/lib/apt/lists/*
+
 RUN pip install -e .[flask]
 RUN pip install -r requirements-dev.txt
 
