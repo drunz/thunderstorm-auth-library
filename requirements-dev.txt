@@ -6,3 +6,4 @@ psycopg2>=2.7,<2.8
 pytest>=3.0,<4.0
 pytest-cov>=2.5,<3
 sqlalchemy_utils==0.32.21
+codacy-coverage

@@ -1,9 +1,12 @@
 # Thunderstorm Auth Library
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/d55a251ae0fa4511af518cd994e034c7)](https://www.codacy.com/app/AAM/thunderstorm-auth-library?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=artsalliancemedia/thunderstorm-auth-library&amp;utm_campaign=Badge_Grade)
+[![Codacy Badge](https://api.codacy.com/project/badge/Coverage/d55a251ae0fa4511af518cd994e034c7)](https://www.codacy.com/app/AAM/thunderstorm-auth-library?utm_source=github.com&utm_medium=referral&utm_content=artsalliancemedia/thunderstorm-auth-library&utm_campaign=Badge_Coverage)
+
 **Note: This is a public repo**
 
 Thunderstorm auth library is a package mainly for integrating authentication
-provided by the 
+provided by the
 [Thunderstorm User service](https://github.com/artsalliancemedia/thunderstorm-user-service).
 It also provides access to other common tools such as logging until we find a
 better place for them.
@@ -249,7 +252,7 @@ environment before the decorator change.
 ## Logging
 
 Logging shouldn't really live in this library but until we have a better
-place for it, here is where it lives. 
+place for it, here is where it lives.
 
 The logging facility emits JSON formatted logs with some standardised fields
 pulled out to make searching across services easier. This format should be
