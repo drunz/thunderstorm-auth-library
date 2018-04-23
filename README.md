@@ -1,5 +1,6 @@
 # Thunderstorm Auth Library
 
+[![Build Status](https://ts-jenkins.aamts.io/buildStatus/icon?job=AAM/thunderstorm-auth-library/master)](https://ts-jenkins.aamts.io/job/AAM/thunderstorm-auth-library/master)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/d55a251ae0fa4511af518cd994e034c7)](https://www.codacy.com/app/AAM/thunderstorm-auth-library?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=artsalliancemedia/thunderstorm-auth-library&amp;utm_campaign=Badge_Grade)
 [![Codacy Badge](https://api.codacy.com/project/badge/Coverage/d55a251ae0fa4511af518cd994e034c7)](https://www.codacy.com/app/AAM/thunderstorm-auth-library?utm_source=github.com&utm_medium=referral&utm_content=artsalliancemedia/thunderstorm-auth-library&utm_campaign=Badge_Coverage)
 
