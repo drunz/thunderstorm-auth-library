@@ -1,23 +1,24 @@
-.PHONY: requirements requirements-dev lint test build clean dist release codacy
+.PHONY: install lint test build clean dist release codacy
 
 
 CODACY_PROJECT_TOKEN?=fake
+PYTHON_VERSION?=default
+REGISTRY?=docker.io
+VERSION?=0.0.0
 
-
-requirements:
+install:
 	pip install -r requirements.txt
-
-requirements-dev: requirements
 	pip install -r requirements-dev.txt
 
 lint:
-	flake8 thunderstorm_auth test
+	flake8 thunderstorm_auth
 
 test: lint
 	pytest \
 		--cov thunderstorm_auth \
 		--cov-report xml \
-		--junit-xml test_results/results.xml \
+		--cov-append \
+		--junit-xml results-${PYTHON_VERSION}.xml \
 		test/
 
 build:
@@ -28,21 +29,6 @@ clean:
 
 dist: clean
 	python setup.py sdist
-
-release: dist
-	git tag v$$(python setup.py --version)
-	git push --tags
-	github-release release \
-		--user artsalliancemedia \
-		--repo thunderstorm-auth-library \
-		--tag v$$(python setup.py --version) \
-		--pre-release
-	github-release upload \
-		--user artsalliancemedia \
-		--repo thunderstorm-auth-library \
-		--tag v$$(python setup.py --version) \
-		--name thunderstorm-auth-lib-$$(python setup.py --version).tar.gz \
-		--file dist/thunderstorm-auth-lib-$$(python setup.py --version).tar.gz
 
 codacy: test
 	python-codacy-coverage -r coverage.xml
