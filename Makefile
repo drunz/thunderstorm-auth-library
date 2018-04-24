@@ -1,23 +1,24 @@
-.PHONY: requirements requirements-dev lint test build clean dist release codacy
+.PHONY: install lint test build clean dist release codacy
 
 
 CODACY_PROJECT_TOKEN?=fake
+PYTHON_VERSION?=default
+REGISTRY?=docker.io
+VERSION?=0.0.0
 
-
-requirements:
+install:
 	pip install -r requirements.txt
-
-requirements-dev: requirements
 	pip install -r requirements-dev.txt
 
 lint:
-	flake8 thunderstorm_auth test
+	flake8 thunderstorm_auth
 
 test: lint
 	pytest \
 		--cov thunderstorm_auth \
 		--cov-report xml \
-		--junit-xml test_results/results.xml \
+		--cov-append \
+		--junit-xml results-${PYTHON_VERSION}.xml \
 		test/
 
 build:

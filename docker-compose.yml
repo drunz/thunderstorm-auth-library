@@ -1,31 +1,41 @@
 version: '2'
 
 services:
-
-  tox:
-    build: .
-    links:
-      - postgres
+  python34:
+    image: "${REGISTRY}/artsalliancemedia/python:3.4-slim"
+    command: make test
+    working_dir: /var/app
+    environment:
+      - DB_NAME=test_auth_lib_py34
     volumes:
-      - ./thunderstorm_auth/:/src/thunderstorm_auth
-      - ./test/:/src/test
-      - ./test_results/:/app/test_results
-      - ./Makefile:/src/Makefile
-      - ./.flake8:/src/.flake8
-
-  dev:
-    build:
-      dockerfile: Dockerfile.dev
-      context: .
+      - ./:/var/app
     depends_on:
       - postgres
+
+  python35:
+    image: "${REGISTRY}/artsalliancemedia/python:3.5-slim"
+    command: make test
+    working_dir: /var/app
+    environment:
+      - DB_NAME=test_auth_lib_py35
     volumes:
-      - .:/src/thunderstorm_auth
+      - ./:/var/app
+    depends_on:
+      - postgres
+
+  python36:
+    image: "${REGISTRY}/artsalliancemedia/python:3.6-slim"
+    command: make test
+    working_dir: /var/app
+    environment:
+      - DB_NAME=test_auth_lib_py36
+    volumes:
+      - ./:/var/app
+    depends_on:
+      - postgres
 
   postgres:
     image: postgres:9.6
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-    ports:
-      - 5432

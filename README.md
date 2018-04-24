@@ -409,11 +409,11 @@ set `ensure_exchange_exists` to `False`.
 
 ## Testing
 
-Testing across mutiple Python versions is managed by [tox](https://tox.readthedocs.io/en/latest/).
-Run them with docker-compose.
+At present the library needs to support python versions 3.4, 3.5 and 3.6. The docker-compose file in this repo has individual services for each python version.
+e.g. to run unit tests for python 3.4:
 
 ```bash
-> docker-compose run --rm tox
+> docker-compose run --rm python34 make test
 ```
 
 ## Releasing
