@@ -31,7 +31,7 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
         public_key = get_public_key_from_jwk(jwks['keys'][key_id])
 
         return jwt.decode(
-            jwt=token,
+            token,
             key=public_key,
             leeway=leeway,
             algorithms=[algorithm]
