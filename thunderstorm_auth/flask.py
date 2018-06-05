@@ -98,6 +98,10 @@ def _validate_permission(token_data, permission):
     if permission:
         service_name = current_app.config['TS_SERVICE_NAME']
         permissions.validate_permission(token_data, service_name, permission)
+    else:
+        current_app.logger.error(
+            'Route with auth but no permission: {}'.format(request.path)
+        )
 
 
 def _bad_token(error):
