@@ -74,7 +74,6 @@ def create_group_association_model(group_type, base):
         {
             '__ts_group_type__': group_type,
             '__tablename__': group_type.table_name,
-            '__table_args__ ': {'schema': SCHEMA},
             'group_uuid': Column(UUID(as_uuid=True), primary_key=True),
             group_type.member_column_name: Column(UUID(as_uuid=True), primary_key=True)
         }
