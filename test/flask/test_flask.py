@@ -7,36 +7,6 @@ from thunderstorm_auth import utils
 
 
 @pytest.fixture
-def valid_token_with_perm(private_key, key_id, token_data):
-    return utils.encode_token(
-        private_key,
-        key_id,
-        {
-            'username': 'test-user',
-            'permissions': {
-                'test-service': ['perm-a']
-            },
-            'groups': []
-        }
-    )
-
-
-@pytest.fixture
-def valid_token_with_perm_wrong_service(private_key, key_id):
-    return utils.encode_token(
-        private_key,
-        key_id,
-        {
-            'username': 'test-user',
-            'permissions': {
-                'other-service': ['perm-a']
-            },
-            'groups': []
-        }
-    )
-
-
-@pytest.fixture
 def flask_app(jwk_set):
     app = flask.Flask('test_app')
     app.config['TS_AUTH_JWKS'] = jwk_set

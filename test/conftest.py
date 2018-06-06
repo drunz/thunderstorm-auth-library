@@ -75,6 +75,36 @@ def valid_token_signed_with_incorrect_key(key_id, token_data, alternate_private_
 
 
 @pytest.fixture
+def valid_token_with_perm(private_key, key_id, token_data):
+    return utils.encode_token(
+        private_key,
+        key_id,
+        {
+            'username': 'test-user',
+            'permissions': {
+                'test-service': ['perm-a']
+            },
+            'groups': []
+        }
+    )
+
+
+@pytest.fixture
+def valid_token_with_perm_wrong_service(private_key, key_id):
+    return utils.encode_token(
+        private_key,
+        key_id,
+        {
+            'username': 'test-user',
+            'permissions': {
+                'other-service': ['perm-a']
+            },
+            'groups': []
+        }
+    )
+
+
+@pytest.fixture
 def invalid_token():
     # using a junk string here rather than a truncated token as truncated
     # tokens do not trigger the desired error
@@ -97,4 +127,21 @@ def expired_token(private_key, key_id, token_data):
         private_key,
         key_id,
         dict(token_data, exp=expiry)
+    )
+
+
+@pytest.fixture
+def expired_token_with_perm(private_key, key_id):
+    expiry = datetime.utcnow() - timedelta(hours=1)
+    return utils.encode_token(
+        private_key,
+        key_id,
+        {
+            'username': 'test-user',
+            'permissions': {
+                'test-service': ['perm-a']
+            },
+            'groups': [],
+            'exp': expiry,
+        }
     )
