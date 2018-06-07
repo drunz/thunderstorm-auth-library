@@ -1,5 +1,6 @@
 import json
 import logging
+import warnings
 
 from thunderstorm_auth import TOKEN_HEADER
 from thunderstorm_auth.decoder import decode_token
@@ -52,6 +53,10 @@ class TsAuthMiddleware:
 
         if not self.with_permission:
             logger.error('Auth configured with no permission')
+            warnings.warn(
+                'Route with auth but no permission. '
+                'In future this will not be allowed.'
+            )
 
     def process_resource(self, req, res, resource, params):
         requires_auth = getattr(resource, 'requires_auth', False)
