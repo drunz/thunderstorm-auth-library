@@ -177,6 +177,8 @@ def init_celery(celery_app):
 
 #### Defining permissions
 
+\[[Falcon](./docs/falcon.md#defining-permissions)\]
+
 Now that we have the permissions model, CLI and syncing fully integrated we
 can start using permissions.
 

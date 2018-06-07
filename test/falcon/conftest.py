@@ -19,7 +19,11 @@ def resource():
 
 @pytest.fixture
 def middleware(jwk_set):
-    return TsAuthMiddleware(jwk_set)
+    return TsAuthMiddleware(
+        jwk_set,
+        with_permission='perm-a',
+        service_name='test-service',
+    )
 
 
 @pytest.fixture

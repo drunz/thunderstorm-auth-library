@@ -1,9 +1,14 @@
 import json
+import logging
+import warnings
 
 from thunderstorm_auth import TOKEN_HEADER
 from thunderstorm_auth.decoder import decode_token
-from thunderstorm_auth.exceptions import ThunderstormAuthError
-from thunderstorm_auth.exceptions import TokenError, TokenHeaderMissing, AuthJwksNotSet
+from thunderstorm_auth.exceptions import (
+    TokenError, TokenHeaderMissing, AuthJwksNotSet,
+    ThunderstormAuthError, InsufficientPermissions
+)
+from thunderstorm_auth import permissions
 from thunderstorm_auth.user import User
 
 try:
@@ -13,13 +18,19 @@ except ImportError:
     HAS_FALCON = False
 
 
+logger = logging.getLogger(__name__)
+
 USER_CONTEXT_KEY = 'ts_user'
 
 
 class TsAuthMiddleware:
     """Falcon middleware for Thunderstorm Authentication."""
 
-    def __init__(self, jwks, expiration_leeway=0):
+    def __init__(
+        self, jwks, expiration_leeway=0,
+        with_permission=None, service_name=None,
+
+    ):
         """Falcon middleware for Thunderstorm Authentication.
 
         Args:
@@ -37,6 +48,15 @@ class TsAuthMiddleware:
 
         self.expiration_leeway = expiration_leeway
         self.jwks = jwks
+        self.with_permission = with_permission
+        self.service_name = service_name
+
+        if not self.with_permission:
+            logger.error('Auth configured with no permission')
+            warnings.warn(
+                'Route with auth but no permission. '
+                'In future this will not be allowed.'
+            )
 
     def process_resource(self, req, res, resource, params):
         requires_auth = getattr(resource, 'requires_auth', False)
@@ -44,7 +64,8 @@ class TsAuthMiddleware:
         if requires_auth:
             try:
                 decoded_token_data = self._decode_token(req)
-            except TokenError as error:
+                self._validate_permission(decoded_token_data)
+            except (TokenError, InsufficientPermissions) as error:
                 raise _bad_token(error)
 
             user = User.from_decoded_token(decoded_token_data)
@@ -61,6 +82,12 @@ class TsAuthMiddleware:
             self.jwks,
             leeway=self.expiration_leeway
         )
+
+    def _validate_permission(self, token_data):
+        if self.with_permission:
+            permissions.validate_permission(
+                token_data, self.service_name, self.with_permission
+            )
 
 
 def _get_token(request):

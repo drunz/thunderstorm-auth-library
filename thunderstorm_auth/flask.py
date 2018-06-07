@@ -1,5 +1,6 @@
 from functools import wraps
 import uuid
+import warnings
 
 from flask import g
 import click
@@ -44,6 +45,11 @@ def ts_auth_required(func=None, *, with_permission=None):
 
     if with_permission is not None:
         permissions.register_permission(with_permission)
+    else:
+        warnings.warn(
+            'Route with auth but no permission. '
+            'In future this will not be allowed.'
+        )
 
     def wrapper(func):
         @wraps(func)

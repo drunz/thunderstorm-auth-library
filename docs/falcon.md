@@ -51,12 +51,33 @@ class MyResource:
 
 ### Permissions
 
-Not yet implemented for Falcon
+See \[[Flask docs](/README.md#permissions)\] for managing the Permission model.
 
 #### Defining permissions
 
-Not yet implemented for Falcon
+Now that we have the permissions model, CLI and syncing fully integrated we
+can start using permissions.
+
+To require a specific permission for a given middleware instance add
+the `with_permission` and `service_name` keyword arguments to the
+`TsAuthMiddleware` constructor.
+
+```python
+auth_middleware = TsAuthMiddleware(
+  os.environ['TS_AUTH_JWKS'],
+  with_permission='my-permission',
+  service_name=os.environ['TS_SERVICE_NAME'],
+)
+...
+```
+
+Now a request through this middleware will only be allowed if it has a valid
+authentication token and that token contains the `my-permission` permission
+for the given service. In order for that to be possible the user service needs
+to be made aware of this new permission. See the 
+[Flask docs](/README.md#defining-permissions) managing the Permission model.
 
 #### Deploying permissions
 
+See \[[Flask docs](/README.md#deploying-permissions)\] for managing the Permission model.
 Not yet implemented for Falcon
