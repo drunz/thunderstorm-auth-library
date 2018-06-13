@@ -8,7 +8,7 @@ from thunderstorm_auth.exceptions import (ExpiredTokenError, BrokenTokenError, M
                                           TokenDecodeError)
 
 
-def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
+def decode_token(token, jwks, leeway=DEFAULT_LEEWAY, options=None):
     """Decode and extract data from a JWT.
 
     Args:
@@ -16,6 +16,8 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
         jwks (dict): JWK Set containing JWKs to be tried to decode the token.
         leeway (int): Number of seconds of lenience used in determining if a
             token has expired.
+        options (dict): Allow the caller to pass additional options to the
+            decode method of pyjwt.
 
     Returns:
          dict payload stored in the token
@@ -34,7 +36,8 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY):
             token,
             key=public_key,
             leeway=leeway,
-            algorithms=[algorithm]
+            algorithms=[algorithm],
+            options=options
         )
 
     except jwt.exceptions.ExpiredSignatureError:
