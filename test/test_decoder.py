@@ -25,6 +25,12 @@ def test_get_decoded_token_raises_if_jwt_expired(expired_token, jwk_set):
 
 
 def test_get_decoded_token_does_not_raise_if_jwt_expired_but_leeway_is_set(
+def test_decode_token_does_not_raise_if_jwt_expired_but_verify_exp_false(
+    expired_token, jwk_set
+):
+    assert decode_token(expired_token, jwk_set, options={'verify_exp': False})
+
+
         expired_token, jwk_set):
     assert decode_token(expired_token, jwk_set, leeway=3605)
 
