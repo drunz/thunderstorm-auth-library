@@ -159,7 +159,7 @@ class Client:
         headers = kwargs.setdefault('headers', {})
         headers[TOKEN_HEADER] = self.authenticator.access_token
 
-        res = requests.get(*args, **kwargs)
+        res = getattr(requests, method)(*args, **kwargs)
 
         if res.status_code == 401 and refresh:
             self.authenticator.refresh_access_token()
