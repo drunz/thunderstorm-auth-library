@@ -21,9 +21,6 @@ class AssumeIdentityError(Exception):
 class Authenticator(metaclass=ABCMeta):
     """Abstract base class for managing auth refresh cycles"""
 
-    def __init__(self):
-        self._cached_access_token_expiry = None
-
     @property
     @abstractmethod
     def access_token(self):
@@ -32,7 +29,7 @@ class Authenticator(metaclass=ABCMeta):
     def needs_refresh(self):
         if not self.access_token:
             return True
-        if _is_time_in_past(self._cached_access_token_expiry):
+        if _is_time_in_past(self._access_token_expiry):
             return True
         return False
 
@@ -51,11 +48,12 @@ class Authenticator(metaclass=ABCMeta):
 class DirectIdentityAuthenticator(Authenticator):
     """Manages the token refresh cycle for normal authentication"""
 
-    def __init__(self, user_service_url, jwks, access_token, refresh_token):
+    def __init__(self, user_service_url, jwks, refresh_token, access_token=None):
         super()
         self.user_service_url = user_service_url
         self.jwks = jwks
         self._access_token = access_token
+        self._access_token_expiry = get_token_expiry(access_token, jwks)
         self._refresh_token = refresh_token
 
     @property
@@ -65,15 +63,15 @@ class DirectIdentityAuthenticator(Authenticator):
     def refresh_access_token(self):
         try:
             resp = requests.post(
-                '{}/api/v1/auth/login'.format(self.user_serivce_url),
-                json={'token': self.refresh_token},
+                '{}/api/v1/auth/login'.format(self.user_service_url),
+                json={'token': self._refresh_token},
             )
             access_token, payload = self._parse_response(resp)
         except (requests.RequestException, ThunderstormAuthError) as err:
             raise RefreshError(err)
         else:
             self._access_token = access_token
-            self._cached_access_token_expiry = payload['exp']
+            self._access_token_expiry = payload['exp']
 
 
 class AssumedIdentityAuthenticator(Authenticator):
@@ -81,27 +79,30 @@ class AssumedIdentityAuthenticator(Authenticator):
 
     def __init__(self, client, assume_identity):
         super()
-        self.client = client
-        self._assumed_identity_access_token = assume_identity
+        self._client = client
+        self.jwks = self._client.authenticator.jwks
+        self._access_token = assume_identity
+        self._access_token_expiry = get_token_expiry(assume_identity, self.jwks)
 
     @property
     def access_token(self):
-        return self._assumed_identity_access_token
+        return self._access_token
 
     def refresh_access_token(self):
         try:
             resp = self._client.post(
                 '{}/api/v1/auth/assume-identity'.format(
-                    self.client.user_serivce_url
+                    self._client.authenticator.user_service_url
                 ),
-                json={'token': self._assumed_identity_access_token},
+                json={'token': self.access_token},
+                headers={'X-Thunderstorm-Key': self._client.authenticator.access_token}
             )
             access_token, payload = self._parse_response(resp)
         except (requests.RequestException, ThunderstormAuthError) as err:
             raise AssumeIdentityError(err)
         else:
-            self._assumed_identity_access_token = access_token
-            self._cached_access_token_expiry = payload['exp']
+            self._access_token = access_token
+            self._access_token_expiry = payload['exp']
 
 
 class Client:
@@ -125,10 +126,10 @@ class Client:
         self.authenticator = authenticator
 
     @staticmethod
-    def direct(user_service_url, jwks, access_token, refresh_token):
+    def direct(user_service_url, jwks, refresh_token, access_token=None):
         return Client(
             DirectIdentityAuthenticator(
-                user_service_url, jwks, access_token, refresh_token
+                user_service_url, jwks, refresh_token, access_token=access_token
             )
         )
 
@@ -136,19 +137,22 @@ class Client:
         return Client(AssumedIdentityAuthenticator(self, assume_identity))
 
     def get(self, *args, **kwargs):
-        return self._request('GET', args, kwargs)
+        return self._request('get', args, kwargs)
 
     def post(self, *args, **kwargs):
-        return self._request('POST', args, kwargs)
+        return self._request('post', args, kwargs)
 
     def put(self, *args, **kwargs):
-        return self._request('PUT', args, kwargs)
+        return self._request('put', args, kwargs)
 
     def patch(self, *args, **kwargs):
-        return self._request('PATCH', args, kwargs)
+        return self._request('patch', args, kwargs)
 
     def options(self, *args, **kwargs):
-        return self._request('OPTIONS', args, kwargs)
+        return self._request('options', args, kwargs)
+
+    def delete(self, *args, **kwargs):
+        return self._request('delete', args, kwargs)
 
     def _request(self, method, args, kwargs, *, refresh=True):
         """Make an authenticated request refreshing if needed"""
@@ -160,24 +164,42 @@ class Client:
         headers[TOKEN_HEADER] = self.authenticator.access_token
 
         res = getattr(requests, method)(*args, **kwargs)
-
         if res.status_code == 401 and refresh:
             self.authenticator.refresh_access_token()
-            return self._request(method, args, kwargs, refresh=False)
+            self._request(method, args, kwargs, refresh=False)
+
+        return res
 
 
 def _is_time_in_past(stamp):
     """Return True if the provided timestamp is in the past
 
     Args:
-        stamp (datetime): Timestamp to test
+        stamp (int/float): Timestamp to test
 
     Return:
         boolean
     """
     if stamp is None:
         return True
-    elif stamp < datetime.utcnow():
+    elif stamp <= datetime.utcnow().timestamp():
         return True
 
     return False
+
+
+def get_token_expiry(token, jwks):
+    """
+    Get the expiry time of a token
+
+    Args:
+        token (str): JWT to be decoded
+        jwks (dict): Dict of keys to try when decoding the token
+
+    Returns:
+        int on success, otherwise None
+    """
+    if not token:
+        return None
+
+    return decode_token(token, jwks, options={'verify_exp': False})['exp']
