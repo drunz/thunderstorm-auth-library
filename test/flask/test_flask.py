@@ -3,7 +3,6 @@ import pytest
 
 from thunderstorm_auth.exceptions import ThunderstormAuthError
 from thunderstorm_auth.flask import ts_auth_required
-from thunderstorm_auth import utils
 
 
 @pytest.fixture

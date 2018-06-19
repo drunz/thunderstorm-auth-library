@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 import functools
 
 import jwt.algorithms
@@ -72,7 +72,8 @@ def make_token(private_key, key_id):
         calling the returned object. If no lifetime is specified it defaults
         to 15 minutes.
     """
-    return functools.partial(utils.encode_token,
+    return functools.partial(
+        utils.encode_token,
         private_key,
         key_id
     )
@@ -123,7 +124,7 @@ def refresh_token(make_token, refresh_token_payload):
 @pytest.fixture
 def token_signed_with_incorrect_key(
     key_id, access_token_payload, alternate_private_key
-    ):
+):
     """ Return a token signed with a key that does not match the KID specified
     """
     return utils.encode_token(

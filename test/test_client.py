@@ -1,4 +1,4 @@
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import patch, PropertyMock
 
 import pytest
 from requests import RequestException
@@ -154,7 +154,7 @@ def test_get_token_expiry_with_expired_token(access_token_expired, jwk_set):
     RequestException
 ])
 def test_assumed_identity_client_refresh_access_token_failure(
-     exception_class, jwk_set, access_token_expired, refresh_token
+    exception_class, jwk_set, access_token_expired, refresh_token
 ):
     # arrange
     client = Client.direct(
@@ -174,7 +174,7 @@ def test_assumed_identity_client_refresh_access_token_failure(
 
 @patch('thunderstorm_auth.client.requests')
 def test_assumed_identity_client_refresh_access_token_success(
-     mock_requests, jwk_set, access_token, refresh_token, access_token_expired
+    mock_requests, jwk_set, access_token, refresh_token, access_token_expired
 ):
     # arrange
     mock_requests.post.return_value.json.return_value = {'token': access_token}
