@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
+import functools
 
 import jwt.algorithms
 import pytest
@@ -47,101 +48,104 @@ def jwk_set(jwk, key_id, alternate_jwk, alternate_key_id):
 
 
 @pytest.fixture
-def token_data():
+def access_token_payload():
     return {
         'username': 'test-user',
-        'permissions': {},
-        'groups': []
+        'token_type': 'access',
+        'groups': [],
+        'permissions': {}
     }
 
 
 @pytest.fixture
-def valid_token(private_key, key_id, token_data):
-    return utils.encode_token(
+def refresh_token_payload():
+    return {
+        'username': 'test-user',
+        'token_type': 'refresh',
+    }
+
+
+@pytest.fixture
+def make_token(private_key, key_id):
+    """Returns a partial object for creating a token.
+        Callers can then specify their desired payload or lifetime when
+        calling the returned object. If no lifetime is specified it defaults
+        to 15 minutes.
+    """
+    return functools.partial(
+        utils.encode_token,
         private_key,
-        key_id,
-        token_data
+        key_id
     )
 
 
 @pytest.fixture
-def valid_token_signed_with_incorrect_key(key_id, token_data, alternate_private_key):
+def access_token(make_token, access_token_payload):
+    return make_token(access_token_payload)
+
+
+@pytest.fixture
+def access_token_with_permissions(make_token, access_token_payload):
+    access_token_payload['permissions'] = {
+        # service name needs to match the service name defined in flask_app fixture
+        'test-service': ['perm-a']
+    }
+    return make_token(access_token_payload)
+
+
+@pytest.fixture
+def access_token_with_permissions_wrong_service(make_token, access_token_payload):
+    access_token_payload['permissions'] = {
+        'other-service': ['perm-a']
+    }
+    return make_token(access_token_payload)
+
+
+@pytest.fixture
+def access_token_expired(make_token, access_token_payload):
+    lifetime = timedelta(hours=-1)
+    return make_token(access_token_payload, lifetime=lifetime)
+
+
+@pytest.fixture
+def access_token_expired_with_permissions(make_token, access_token_payload):
+    lifetime = timedelta(hours=-1)
+    access_token_payload['permissions'] = {
+        'test-service': ['perm-a']
+    }
+    return make_token(access_token_payload, lifetime=lifetime)
+
+
+@pytest.fixture
+def refresh_token(make_token, refresh_token_payload):
+    return make_token(refresh_token_payload)
+
+
+@pytest.fixture
+def token_signed_with_incorrect_key(
+    key_id, access_token_payload, alternate_private_key
+):
+    """ Return a token signed with a key that does not match the KID specified
+    """
     return utils.encode_token(
         # token should have been signed with private_key
         alternate_private_key,
         key_id,
-        token_data
+        access_token_payload
     )
 
 
 @pytest.fixture
-def valid_token_with_perm(private_key, key_id, token_data):
-    return utils.encode_token(
-        private_key,
-        key_id,
-        {
-            'username': 'test-user',
-            'permissions': {
-                'test-service': ['perm-a']
-            },
-            'groups': []
-        }
-    )
-
-
-@pytest.fixture
-def valid_token_with_perm_wrong_service(private_key, key_id):
-    return utils.encode_token(
-        private_key,
-        key_id,
-        {
-            'username': 'test-user',
-            'permissions': {
-                'other-service': ['perm-a']
-            },
-            'groups': []
-        }
-    )
-
-
-@pytest.fixture
-def invalid_token():
+def malformed_token():
     # using a junk string here rather than a truncated token as truncated
     # tokens do not trigger the desired error
-    return 'this is not even a token'.encode('utf-8')
+    return 'this is not even a token'
 
 
 @pytest.fixture
-def invalid_token_no_headers(private_key):
+def token_with_no_headers(private_key):
     return jwt.encode(
         {'data': 'nodata'},
         private_key,
         algorithm='RS512'
-    )
-
-
-@pytest.fixture
-def expired_token(private_key, key_id, token_data):
-    expiry = datetime.utcnow() - timedelta(hours=1)
-    return utils.encode_token(
-        private_key,
-        key_id,
-        dict(token_data, exp=expiry)
-    )
-
-
-@pytest.fixture
-def expired_token_with_perm(private_key, key_id):
-    expiry = datetime.utcnow() - timedelta(hours=1)
-    return utils.encode_token(
-        private_key,
-        key_id,
-        {
-            'username': 'test-user',
-            'permissions': {
-                'test-service': ['perm-a']
-            },
-            'groups': [],
-            'exp': expiry,
-        }
     )

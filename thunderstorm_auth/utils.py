@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import hashlib
 import json
 
@@ -37,7 +38,7 @@ def generate_key_id(jwk):
     ).hexdigest()
 
 
-def encode_token(private_key, key_id, payload):
+def encode_token(private_key, key_id, payload, lifetime=None):
     """Encode a token with a private key
 
     Args:
@@ -48,9 +49,19 @@ def encode_token(private_key, key_id, payload):
     Returns:
         str: Encoded JWT
     """
+    # issued at time
+    payload['iat'] = datetime.utcnow()
+
+    lifetime = lifetime or timedelta(minutes=15)
+
+    expiry = datetime.utcnow() + lifetime
+    payload['exp'] = expiry
+
     return jwt.encode(
         payload,
         private_key,
         algorithm='RS512',
-        headers={'kid': key_id}
-    )
+        headers={
+            'kid': key_id
+        }
+    ).decode()
