@@ -1,11 +1,12 @@
 from datetime import datetime
 from abc import ABCMeta, abstractmethod
 
-import requests
+from requests import RequestException
 
 from thunderstorm_auth import TOKEN_HEADER
 from thunderstorm_auth.decoder import decode_token
 from thunderstorm_auth.exceptions import ThunderstormAuthError
+from thunderstorm_auth.logging import requests
 
 
 class RefreshError(Exception):
@@ -67,7 +68,7 @@ class DirectIdentityAuthenticator(Authenticator):
                 json={'token': self._refresh_token},
             )
             access_token, payload = self._parse_response(resp)
-        except (requests.RequestException, ThunderstormAuthError) as err:
+        except (RequestException, ThunderstormAuthError) as err:
             raise RefreshError(err)
         else:
             self._access_token = access_token
@@ -98,7 +99,7 @@ class AssumedIdentityAuthenticator(Authenticator):
                 headers={'X-Thunderstorm-Key': self._client.authenticator.access_token}
             )
             access_token, payload = self._parse_response(resp)
-        except (requests.RequestException, ThunderstormAuthError) as err:
+        except (RequestException, ThunderstormAuthError) as err:
             raise AssumeIdentityError(err)
         else:
             self._access_token = access_token
