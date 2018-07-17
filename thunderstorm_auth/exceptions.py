@@ -39,10 +39,21 @@ class InsufficientPermissions(ThunderstormAuthError):
     pass
 
 
+# TODO: Review in future whether or not this should be pulled from the
+# thunderstorm library. for now try and keep them in sync
 class HTTPError(ThunderstormAuthError):
-    """To be used when raising exceptions to be caught by the flask app
+    """To be used when creating HTTP exceptions to be caught by the flask app
     """
     def __init__(self, message='Error', code=None):
-        super().__init__()
         self.message = message
         self.code = code
+
+
+class Unauthorized(HTTPError):
+    def __init__(self, message='Unauthorized'):
+        super().__init__(message=message, code=401)
+
+
+class Forbidden(HTTPError):
+    def __init__(self, message='Forbidden'):
+        super().__init__(message=message, code=403)
