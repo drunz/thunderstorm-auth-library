@@ -5,30 +5,6 @@ from thunderstorm_auth.exceptions import ThunderstormAuthError
 from thunderstorm_auth.flask import ts_auth_required
 
 
-@pytest.fixture
-def flask_app(jwk_set):
-    app = flask.Flask('test_app')
-    app.config['TS_AUTH_JWKS'] = jwk_set
-    app.config['TS_SERVICE_NAME'] = 'test-service'
-
-    @app.route('/')
-    @ts_auth_required
-    def hello_world():
-        return 'Hello, World!'
-
-    @app.route('/no-params')
-    @ts_auth_required()
-    def no_params():
-        return 'no params'
-
-    @app.route('/perm-a')
-    @ts_auth_required(with_permission='perm-a')
-    def with_perm_a():
-        return 'with perm a'
-
-    return app
-
-
 def test_ts_auth_required_fails_with_non_callable():
     with pytest.raises(ThunderstormAuthError):
         ts_auth_required('my-perm')
