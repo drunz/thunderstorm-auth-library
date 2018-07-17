@@ -46,8 +46,8 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY, options=None):
         )
     except jwt.exceptions.DecodeError as ex:
         raise TokenDecodeError('An error occurred while decoding your token: {}'.format(ex))
-    except BrokenTokenError as ex:
-        raise BrokenTokenError(ex)
+    except BrokenTokenError:
+        raise
     except KeyError:
         raise MissingKeyErrror(
             'The key_id specified in your token is not present in the JWK set provided.'

@@ -25,11 +25,11 @@ def validate_permission(token_data, service_name, permission):
                                  permission
     """
     if not isinstance(token_data, Mapping):
-        raise BrokenTokenError()
+        raise BrokenTokenError('Token data must be structured as a dict')
     elif not isinstance(token_data.get('permissions'), Mapping):
-        raise BrokenTokenError()
+        raise BrokenTokenError('Token permissions must be structured as a dict')
     elif permission not in token_data['permissions'].get(service_name, []):
-        raise InsufficientPermissions()
+        raise InsufficientPermissions('You do not have the permission required to carry out this action')
 
 
 def register_permission(permission):

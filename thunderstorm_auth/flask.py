@@ -10,12 +10,12 @@ from thunderstorm_auth.decoder import decode_token
 from thunderstorm_auth import permissions
 from thunderstorm_auth.exceptions import (
     TokenError, TokenHeaderMissing, AuthJwksNotSet, ThunderstormAuthError,
-    ExpiredTokenError, InsufficientPermissions
+    InsufficientPermissions, Forbidden, Unauthorized
 )
 from thunderstorm_auth.user import User
 
 try:
-    from flask import current_app, jsonify, request
+    from flask import current_app, request
     HAS_FLASK = True
 except ImportError:
     HAS_FLASK = False
@@ -58,7 +58,7 @@ def ts_auth_required(func=None, *, with_permission=None):
                 decoded_token_data = _decode_token()
                 _validate_permission(decoded_token_data, with_permission)
             except (TokenError, InsufficientPermissions) as error:
-                return _bad_token(error)
+                _bad_token(error)
 
             g.user = User.from_decoded_token(decoded_token_data)
             return func(*args, **kwargs)
@@ -111,12 +111,12 @@ def _validate_permission(token_data, permission):
 
 
 def _bad_token(error):
-    if isinstance(error, ExpiredTokenError):
-        current_app.logger.info(error)
+    current_app.logger.info(error)
+
+    if isinstance(error, InsufficientPermissions):
+        raise Forbidden('You do not have the required permission to carry out the requested action')
     else:
-        current_app.logger.error(error)
-    status_code = 403 if isinstance(error, InsufficientPermissions) else 401
-    return jsonify(message=str(error)), status_code
+        raise Unauthorized('Invalid authentication token provided')
 
 
 def init_auth(app, db_session, permission_model):
