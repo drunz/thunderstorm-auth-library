@@ -37,3 +37,12 @@ class ExpiredTokenError(TokenError):
 
 class InsufficientPermissions(ThunderstormAuthError):
     pass
+
+
+class HTTPError(ThunderstormAuthError):
+    """To be used when raising exceptions to be caught by the flask app
+    """
+    def __init__(self, message='Error', code=None):
+        super().__init__()
+        self.message = message
+        self.code = code
