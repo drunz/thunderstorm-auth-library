@@ -1,5 +1,5 @@
 __title__ = 'thunderstorm-auth-lib'
-__version__ = '0.3.8'
+__version__ = '0.3.9'
 
 
 TOKEN_HEADER = 'X-Thunderstorm-Key'
