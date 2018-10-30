@@ -1,6 +1,6 @@
-celery>4,<5
+celery>4.1.1,<5
 cryptography>=2.0.3,<3
 pyjwt>=1.5.2,<2
-python-json-logger==0.1.8
-requests==2.20.0
+python-json-logger==0.1.8,<1
+requests>=2.20.0<3
 sqlalchemy>=1.1,<1.3
