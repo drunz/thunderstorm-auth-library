@@ -11,7 +11,7 @@ def _read_requirements(requirements_filename):
 REQUIREMENTS = _read_requirements('requirements.txt')
 EXTRA_REQS = {
     'flask': [
-        'flask>=0.12.3,<1'
+        'flask>=0.12.3,<2'
     ],
     'falcon': [
         'falcon>=1.3,<1.4'
