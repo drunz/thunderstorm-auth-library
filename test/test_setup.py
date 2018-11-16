@@ -10,20 +10,14 @@ from thunderstorm_auth import group, setup
 
 @pytest.fixture
 def group_types():
-    return [
-        group.GroupType('foo'),
-        group.GroupType('bar')
-    ]
+    return [group.GroupType('foo'), group.GroupType('bar')]
 
 
 @pytest.fixture
 def models(group_types):
     base = declarative_base()
     foo_type, bar_type = group_types
-    return [
-        group.create_group_association_model(foo_type, base),
-        group.create_group_association_model(bar_type, base)
-    ]
+    return [group.create_group_association_model(foo_type, base), group.create_group_association_model(bar_type, base)]
 
 
 @pytest.fixture
@@ -65,12 +59,8 @@ def test_init_group_sync_queue(celery_app, models, group_types):
     queue = celery_app.conf.task_queues[0]
     assert isinstance(queue, kombu.Queue)
     assert queue.name == 'example_service.ts_auth.group'
-    assert {
-        (binding.exchange, binding.routing_key)
-        for binding in queue.bindings
-    } == {
-        (setup.EXCHANGE, foo_type.routing_key),
-        (setup.EXCHANGE, bar_type.routing_key),
-        (setup.LEGACY_EXCHANGE, foo_type.routing_key),
-        (setup.LEGACY_EXCHANGE, bar_type.routing_key),
-    }
+    assert {(binding.exchange, binding.routing_key)
+            for binding in queue.bindings} == {
+                (setup.EXCHANGE, 'role.data'), (setup.EXCHANGE, foo_type.routing_key),
+                (setup.EXCHANGE, bar_type.routing_key)
+            }

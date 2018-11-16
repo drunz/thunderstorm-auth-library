@@ -22,7 +22,6 @@ class TokenDecodeError(TokenError):
 
 
 class TokenHeaderMissing(TokenError):
-
     def __init__(self):
         super().__init__('Missing auth header: {}'.format(TOKEN_HEADER))
 
@@ -44,6 +43,7 @@ class InsufficientPermissions(ThunderstormAuthError):
 class HTTPError(ThunderstormAuthError):
     """To be used when creating HTTP exceptions to be caught by the flask app
     """
+
     def __init__(self, message='Error', code=None):
         self.message = message
         self.code = code

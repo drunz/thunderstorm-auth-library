@@ -27,14 +27,7 @@ def filter_for_user(query, user, group_assoc_model, join_column):
         # saves performing an expensive `WHERE col IN ()` query
         raise InsufficientPermissions('User has no group associations.')
 
-    group_member_column = getattr(
-        group_assoc_model,
-        group_type.member_column_name
-    )
+    group_member_column = getattr(group_assoc_model, group_type.member_column_name)
     return query.join(
-        group_assoc_model,
-        and_(
-            group_member_column == join_column,
-            group_assoc_model.group_uuid.in_(user.groups)
-        )
+        group_assoc_model, and_(group_member_column == join_column, group_assoc_model.group_uuid.in_(user.groups))
     )

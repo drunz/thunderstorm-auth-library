@@ -4,8 +4,7 @@ import jwt
 import jwt.algorithms
 
 from thunderstorm_auth import DEFAULT_LEEWAY
-from thunderstorm_auth.exceptions import (ExpiredTokenError, BrokenTokenError, MissingKeyErrror,
-                                          TokenDecodeError)
+from thunderstorm_auth.exceptions import (ExpiredTokenError, BrokenTokenError, MissingKeyErrror, TokenDecodeError)
 
 
 def decode_token(token, jwks, leeway=DEFAULT_LEEWAY, options=None):
@@ -32,26 +31,16 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY, options=None):
 
         public_key = get_public_key_from_jwk(jwks['keys'][key_id])
 
-        return jwt.decode(
-            token,
-            key=public_key,
-            leeway=leeway,
-            algorithms=[algorithm],
-            options=options
-        )
+        return jwt.decode(token, key=public_key, leeway=leeway, algorithms=[algorithm], options=options)
 
     except jwt.exceptions.ExpiredSignatureError:
-        raise ExpiredTokenError(
-            'Auth token expired. Please retry with a new token.'
-        )
+        raise ExpiredTokenError('Auth token expired. Please retry with a new token.')
     except jwt.exceptions.DecodeError as ex:
         raise TokenDecodeError('An error occurred while decoding your token: {}'.format(ex))
     except BrokenTokenError:
         raise
     except KeyError:
-        raise MissingKeyErrror(
-            'The key_id specified in your token is not present in the JWK set provided.'
-        )
+        raise MissingKeyErrror('The key_id specified in your token is not present in the JWK set provided.')
 
 
 def get_public_key_from_jwk(jwk):

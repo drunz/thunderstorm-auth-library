@@ -9,14 +9,7 @@ from thunderstorm_auth import logging
 @pytest.fixture
 def record():
     return pylogging.LogRecord(
-        'test.name',
-        pylogging.INFO,
-        '/example/path.py',
-        123,
-        'example message',
-        tuple(),
-        dict(),
-        None
+        'test.name', pylogging.INFO, '/example/path.py', 123, 'example message', tuple(), dict(), None
     )
 
 

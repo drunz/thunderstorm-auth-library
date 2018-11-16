@@ -19,23 +19,15 @@ def load_jwks_from_file(path):
 
 
 def generate_private_key():
-    return rsa.generate_private_key(
-        backend=crypto_default_backend(),
-        public_exponent=65537,
-        key_size=2048
-    )
+    return rsa.generate_private_key(backend=crypto_default_backend(), public_exponent=65537, key_size=2048)
 
 
 def generate_jwk(private_key):
-    return json.loads(
-        RSAAlgorithm.to_jwk(private_key.public_key())
-    )
+    return json.loads(RSAAlgorithm.to_jwk(private_key.public_key()))
 
 
 def generate_key_id(jwk):
-    return hashlib.md5(
-        json.dumps(jwk).encode('utf-8')
-    ).hexdigest()
+    return hashlib.md5(json.dumps(jwk).encode('utf-8')).hexdigest()
 
 
 def encode_token(private_key, key_id, payload, lifetime=None):
@@ -57,11 +49,4 @@ def encode_token(private_key, key_id, payload, lifetime=None):
     expiry = datetime.utcnow() + lifetime
     payload['exp'] = expiry
 
-    return jwt.encode(
-        payload,
-        private_key,
-        algorithm='RS512',
-        headers={
-            'kid': key_id
-        }
-    ).decode()
+    return jwt.encode(payload, private_key, algorithm='RS512', headers={'kid': key_id}).decode()

@@ -30,7 +30,7 @@ def group_sync_task(model, db_session):
     """
     task_name = model.__ts_group_type__.task_name
 
-    @celery.task(name=task_name, autoretry=(SQLAlchemyError,))
+    @celery.task(name=task_name, autoretry=(SQLAlchemyError, ))
     def sync_group_data(group_uuid, members):
         """Synchronizes group membership data.
 
@@ -48,27 +48,16 @@ def group_sync_task(model, db_session):
         added = latest_members - current_members
 
         if removed:
-            delete_group_associations(
-                db_session,
-                model,
-                group_uuid,
-                removed
-            )
+            delete_group_associations(db_session, model, group_uuid, removed)
         if added:
-            add_group_associations(
-                db_session,
-                model,
-                group_uuid,
-                added
-            )
+            add_group_associations(db_session, model, group_uuid, added)
         try:
             db_session.commit()
         except SQLAlchemyError:
             db_session.rollback()
             raise
 
-        logger.info('Updated group: {} - {} members added, {} removed.'
-                    .format(group_uuid, len(added), len(removed)))
+        logger.info('Updated group: {} - {} members added, {} removed.'.format(group_uuid, len(added), len(removed)))
 
     return sync_group_data
 
@@ -84,20 +73,13 @@ def get_current_members(db_session, model, group_uuid):
     Returns:
         set: Set of UUIDs of current members.
     """
-    members = db_session.query(
-        model
-    ).filter(
-        model.group_uuid == group_uuid
-    )
+    members = db_session.query(model).filter(model.group_uuid == group_uuid)
 
     def member_column(item):
         member_column_name = model.__ts_group_type__.member_column_name
         return getattr(item, member_column_name)
 
-    return {
-        member_column(member)
-        for member in members
-    }
+    return {member_column(member) for member in members}
 
 
 def delete_group_associations(db_session, model, group_uuid, removed):
@@ -111,14 +93,8 @@ def delete_group_associations(db_session, model, group_uuid, removed):
     """
     member_column = getattr(model, model.__ts_group_type__.member_column_name)
 
-    db_session.query(
-        model
-    ).filter(
-        model.group_uuid == group_uuid,
-        member_column.in_(removed)
-    ).delete(
-        synchronize_session=False
-    )
+    db_session.query(model).filter(model.group_uuid == group_uuid,
+                                   member_column.in_(removed)).delete(synchronize_session=False)
 
 
 def add_group_associations(db_session, model, group_uuid, added):
@@ -130,13 +106,10 @@ def add_group_associations(db_session, model, group_uuid, added):
         group_uuid (UUID): UUID of the group whose members to fetch
         added (set): UUIDs of members being added.
     """
-    db_session.bulk_insert_mappings(model, [
-        {
-            'group_uuid': group_uuid,
-            model.__ts_group_type__.member_column_name: member_id
-        }
-        for member_id in added
-    ])
+    db_session.bulk_insert_mappings(
+        model,
+        [{'group_uuid': group_uuid, model.__ts_group_type__.member_column_name: member_id} for member_id in added]
+    )
 
 
 PERMISSIONS_NEW = 'permissions.new'
@@ -147,18 +120,15 @@ MESSAGING_EXCHANGE = 'ts.messaging'
 def permission_sync_task(Permission, db_session):
     @celery.task(name='ts_auth.permissions.sync')
     def sync_permissions():
-        permissions = db_session.query(
-            Permission
-        ).filter(
-            Permission.is_sent == False  # noqa
-        )
+        permissions = db_session.query(Permission).filter(Permission.is_sent == False  # noqa
+                                                         )
 
         for permission in permissions:
             if permission.is_deleted:
                 logger.info('deleting permission {}'.format(permission.uuid))
                 send_task(
                     PERMISSIONS_DELETE,
-                    (permission.uuid,),
+                    (permission.uuid, ),
                     exchange=MESSAGING_EXCHANGE,
                     routing_key=PERMISSIONS_DELETE,
                 )
@@ -166,11 +136,7 @@ def permission_sync_task(Permission, db_session):
                 logger.info('adding permission {}'.format(permission.uuid))
                 send_task(
                     PERMISSIONS_NEW,
-                    (
-                        permission.uuid,
-                        permission.service_name,
-                        permission.permission
-                    ),
+                    (permission.uuid, permission.service_name, permission.permission),
                     exchange=MESSAGING_EXCHANGE,
                     routing_key=PERMISSIONS_NEW,
                 )

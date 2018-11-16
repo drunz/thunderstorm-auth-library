@@ -16,10 +16,7 @@ from flask.ctx import has_request_context
 
 from . import JSONFormatter, _register_id_getter
 
-
-__all__ = [
-    'init_app'
-]
+__all__ = ['init_app']
 
 
 def get_flask_request_id():
@@ -36,9 +33,7 @@ def get_flask_request_id():
     """
     if has_request_context():
         if 'request_id' not in g:
-            g.request_id = request.headers.get(
-                'TS-Request-ID', str(uuid.uuid4())
-            )
+            g.request_id = request.headers.get('TS-Request-ID', str(uuid.uuid4()))
         return g.request_id
 
 
@@ -59,9 +54,8 @@ def init_app(app: Flask):
         formatter = logging.Formatter(log_format)
     else:
         formatter = JSONFormatter(
-            log_format,
-            ts_log_type='flask',
-            ts_service=app.config.get('TS_SERVICE_NAME', 'unknown'))
+            log_format, ts_log_type='flask', ts_service=app.config.get('TS_SERVICE_NAME', 'unknown')
+        )
 
     handler.setFormatter(formatter)
     handler.addFilter(FlaskRequestIdFilter())

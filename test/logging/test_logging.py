@@ -55,11 +55,7 @@ class TestJSONFormatter:
 
     def test_grouping_fields_are_added(self, formatter, record):
         # arrange
-        formatter = logging.JSONFormatter(
-            '%(message)s',
-            ts_log_type='test-type',
-            ts_service='test-service'
-        )
+        formatter = logging.JSONFormatter('%(message)s', ts_log_type='test-type', ts_service='test-service')
         log_record = {}
 
         # act
