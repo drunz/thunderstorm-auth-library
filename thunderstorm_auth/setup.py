@@ -4,14 +4,12 @@ import kombu
 from celery import signals
 
 from thunderstorm_auth.tasks import group_sync_task, permission_sync_task
+from thunderstorm_auth.roles import _init_role_tasks, _role_task_routing_key
 
 EXCHANGE = kombu.Exchange('ts.messaging')
 
 
-def init_group_sync_tasks(
-    celery_app, db_session, group_models,
-    ensure_exchange_exists=True
-):
+def init_group_sync_tasks(celery_app, db_session, group_models, ensure_exchange_exists=True, datastore=None):
     """
     Initialize a Celery app with a queue and sync tasks for auth group models.
 
@@ -26,9 +24,12 @@ def init_group_sync_tasks(
         group_models (list): The Thunderstorm auth group models to synchronize.
         ensure_exchange_exists (bool): Whether to error if exchange does not
                                        exist.
+       datastore (AuthStore): a datastore
     """
     _register_task_queue(celery_app, group_models, ensure_exchange_exists)
     _register_sync_tasks(celery_app, db_session, group_models)
+    # TODO @shipperizer move this outta here
+    _init_role_tasks(datastore)
 
 
 def _register_task_queue(celery_app, group_models, ensure_exchange_exists):
