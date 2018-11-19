@@ -37,10 +37,7 @@ node('aam-identity-prodcd') {
             ]) {
               sh 'docker-compose up -d postgres redis memcached'
               sh 'sleep 5'
-              parallel 'python34': {
-                sh "docker-compose run -e CODACY_PROJECT_TOKEN=${env.CODACY_PROJECT_TS_AUTH_LIB_TOKEN} -e PYTHON_VERSION=34 python34 make install test codacy"
-                junit 'results-34.xml'
-              }, 'python35': {
+              parallel 'python35': {
                 sh "docker-compose run -e CODACY_PROJECT_TOKEN=${env.CODACY_PROJECT_TS_AUTH_LIB_TOKEN} -e PYTHON_VERSION=35 python35 make install test codacy"
                 junit 'results-35.xml'
               }, 'python36': {
@@ -82,7 +79,6 @@ node('aam-identity-prodcd') {
             }
       }
     } catch (err) {
-        junit 'results-34.xml'
         junit 'results-35.xml'
         junit 'results-36.xml'
         error 'Thunderstorm Auth Library build failed ${err}'

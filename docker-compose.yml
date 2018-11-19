@@ -1,26 +1,6 @@
 version: '2'
 
 services:
-  python34:
-    image: "${REGISTRY}/artsalliancemedia/python:3.4-slim"
-    command: make test
-    working_dir: /var/app
-    environment:
-      - DB_NAME=test_auth_lib_py34
-      - DB_HOST=postgres
-      - DB_USER=postgres
-      - DB_PASS=postgres
-      - REDIS_HOST=redis
-      - REDIS_DB=4
-      - MEMCACHED_HOST=memcached
-      - MEMCACHED_KEY=34
-    volumes:
-      - ./:/var/app
-    depends_on:
-      - postgres
-      - redis
-      - memcached
-
   python35:
     image: "${REGISTRY}/artsalliancemedia/python:3.5-slim"
     command: make test
