@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+import warnings
 
 from sqlalchemy import Column, String, Boolean
 from sqlalchemy.dialects.postgresql import UUID
@@ -22,6 +23,7 @@ def validate_permission(token_data, service_name, permission):
         InsufficientPermissions: If the token does not contain the required
                                  permission
     """
+    warnings.warn('Token field `permissions` is being deprecated', DeprecationWarning)
     if not isinstance(token_data, Mapping):
         raise BrokenTokenError('Token data must be structured as a dict')
     elif not isinstance(token_data.get('permissions'), Mapping):
