@@ -3,7 +3,6 @@ import functools
 from os import environ
 from unittest.mock import patch
 
-from celery import Celery
 from factory.alchemy import SQLAlchemyModelFactory
 import flask
 import jwt.algorithms
@@ -89,7 +88,7 @@ def access_token(make_token, access_token_payload):
 def access_token_with_permissions(make_token, access_token_payload):
     access_token_payload['permissions'] = {
         # service name needs to match the service name defined in flask_app fixture
-        'test-service': ['perm-a']
+        'test-service': ['perm-a', 'basic']
     }
     return make_token(access_token_payload)
 
@@ -102,6 +101,10 @@ def access_token_with_permissions_wrong_service(make_token, access_token_payload
 
 @pytest.fixture
 def access_token_expired(make_token, access_token_payload):
+    access_token_payload['permissions'] = {
+        # service name needs to match the service name defined in flask_app fixture
+        'test-service': ['perm-a', 'basic']
+    }
     lifetime = timedelta(hours=-1)
     return make_token(access_token_payload, lifetime=lifetime)
 
@@ -154,12 +157,12 @@ def flask_app(datastore, jwk_set):
         app.ts_auth = init_ts_auth(app, datastore)
 
     @app.route('/')
-    @ts_auth_required
+    @ts_auth_required(with_permission='basic')
     def hello_world():
         return 'Hello, World!'
 
     @app.route('/no-params')
-    @ts_auth_required()
+    @ts_auth_required(with_permission='basic')
     def no_params():
         return 'no params'
 

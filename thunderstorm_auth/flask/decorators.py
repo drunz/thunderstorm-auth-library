@@ -1,5 +1,4 @@
 from functools import wraps
-import warnings
 
 from flask import g
 
@@ -37,7 +36,7 @@ def ts_auth_required(func=None, *, with_permission=None):
     if with_permission is not None:
         permissions.register_permission(with_permission)
     else:
-        warnings.warn('Route with auth but no permission. ' 'In future this will not be allowed.')
+        raise ThunderstormAuthError('Route with auth but no permission is not allowed.')
 
     def wrapper(func):
         @wraps(func)

@@ -16,7 +16,7 @@ def test_user_with_decoded_token_data_added_to_req_context(falcon_app, client, a
 
         def on_get(self, req, resp):
             user = req.context['ts_user']
-            assert user == User(username='test-user', roles=[], permissions={'test-service': ['perm-a']}, groups=[])
+            assert user == User(username='test-user', roles=[], permissions={'test-service': ['perm-a', 'basic']}, groups=[])
 
     falcon_app.add_route('/assert-user', AssertUserResource())
 
