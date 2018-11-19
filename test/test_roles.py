@@ -1,10 +1,8 @@
 from uuid import uuid4
-from unittest.mock import patch
 
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from thunderstorm_auth.roles import _init_role_tasks, RoleSchema, PermissionSchema
 from test.models import Role, RolePermissionAssociation
 
 

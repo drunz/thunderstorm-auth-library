@@ -59,8 +59,9 @@ def test_init_group_sync_queue(celery_app, models, group_types):
     queue = celery_app.conf.task_queues[0]
     assert isinstance(queue, kombu.Queue)
     assert queue.name == 'example_service.ts_auth.group'
-    assert {(binding.exchange, binding.routing_key)
-            for binding in queue.bindings} == {
-                (setup.EXCHANGE, 'role.data'), (setup.EXCHANGE, foo_type.routing_key),
-                (setup.EXCHANGE, bar_type.routing_key)
-            }
+    assert {
+        (binding.exchange, binding.routing_key)
+        for binding in queue.bindings
+    } == {
+        (setup.EXCHANGE, 'role.data'), (setup.EXCHANGE, foo_type.routing_key), (setup.EXCHANGE, bar_type.routing_key)
+    }

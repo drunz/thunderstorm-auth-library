@@ -1,5 +1,5 @@
-import uuid
-from unittest import mock
+from uuid import uuid4, UUID
+from unittest.mock import patch, Mock, call
 
 import celery
 import celery.task
@@ -7,8 +7,9 @@ import pytest
 from sqlalchemy.ext.declarative import declarative_base
 
 from thunderstorm_auth import group, tasks
+from thunderstorm_auth.tasks import permission_sync_task
 
-from .test_permissions import make_permission
+from test.models import Permission
 
 
 @pytest.fixture
@@ -32,7 +33,7 @@ def _teardown_celery_app(group_type):
 
 def test_create_group_sync_task(group_model):
     # arrange
-    db_session = mock.Mock()
+    db_session = Mock()
 
     # act
     task = tasks.group_sync_task(group_model, db_session)
@@ -42,16 +43,16 @@ def test_create_group_sync_task(group_model):
     assert task.name == 'ts_auth.group.example.sync'
 
 
-@mock.patch('thunderstorm_auth.tasks.get_current_members')
-@mock.patch('thunderstorm_auth.tasks.delete_group_associations')
-@mock.patch('thunderstorm_auth.tasks.add_group_associations')
+@patch('thunderstorm_auth.tasks.get_current_members')
+@patch('thunderstorm_auth.tasks.delete_group_associations')
+@patch('thunderstorm_auth.tasks.add_group_associations')
 def test_group_sync_task_run(add_group_associations, delete_group_associations, get_current_members, group_model):
     # arrange
-    db_session = mock.Mock(name='db_session')
+    db_session = Mock(name='db_session')
     task = tasks.group_sync_task(group_model, db_session)
 
-    group_uuid = uuid.uuid4()
-    all_members = [uuid.uuid4() for _ in range(4)]
+    group_uuid = uuid4()
+    all_members = [uuid4() for _ in range(4)]
 
     # currently 0, 1, 2
     get_current_members.return_value = set(all_members[:3])
@@ -67,42 +68,36 @@ def test_group_sync_task_run(add_group_associations, delete_group_associations, 
     add_group_associations.assert_called_with(db_session, group_model, group_uuid, {all_members[3]})
 
 
-@mock.patch('thunderstorm_auth.tasks.send_task')
-def test_sync_permissions(mock_send_task):
+@patch('thunderstorm_auth.tasks.send_task')
+def test_sync_permissions(mock_send_task, db_session, fixtures):
     # arrange
-    permission_model = mock.Mock()
-    db_session = mock.Mock()
+    fixtures.Permission(
+        uuid='0fc466f6-101b-11e8-9cd1-4a0004692f50',
+        permission='perm1',
+        service_name='test',
+        is_deleted=True
+    )
+    fixtures.Permission(
+        uuid='255e8a1e-101b-11e8-8d15-4a0004692f50',
+        permission='perm2',
+        service_name='test',
+        is_deleted=False
+    )
 
-    task = tasks.permission_sync_task(permission_model, db_session)
-
-    db_session.query.return_value.filter.return_value = [
-        make_permission(
-            uuid='0fc466f6-101b-11e8-9cd1-4a0004692f50',
-            permission='perm1',
-            is_deleted=True,
-        ),
-        make_permission(
-            uuid='255e8a1e-101b-11e8-8d15-4a0004692f50',
-            permission='perm2',
-            is_deleted=False,
-        )
-    ]
-
-    task()
+    # call task
+    permission_sync_task(Permission, db_session)()
 
     mock_send_task.assert_has_calls(
         [
-            mock.call(
-                'permissions.delete', ('0fc466f6-101b-11e8-9cd1-4a0004692f50', ),
+            call(
+                'permissions.delete', (UUID('0fc466f6-101b-11e8-9cd1-4a0004692f50'), ),
                 exchange='ts.messaging',
                 routing_key='permissions.delete'
             ),
-            mock.call(
-                'permissions.new', ('255e8a1e-101b-11e8-8d15-4a0004692f50', 'test', 'perm2'),
+            call(
+                'permissions.new', (UUID('255e8a1e-101b-11e8-8d15-4a0004692f50'), 'test', 'perm2'),
                 exchange='ts.messaging',
                 routing_key='permissions.new'
             )
         ]
     )
-    assert db_session.commit.call_count == 2
-    assert db_session.add.call_count == 2

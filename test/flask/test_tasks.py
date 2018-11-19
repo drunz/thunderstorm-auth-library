@@ -25,13 +25,13 @@ def test_delete_group_associations(fixtures, db_session):
 
     # act
     tasks.delete_group_associations(
-        db_session, ComplexGroupComplexAssociation, group_uuid, {c.uuid
-                                                                 for c in complexes[1:]}
+        db_session, ComplexGroupComplexAssociation, group_uuid, {c.uuid for c in complexes[1:]}
     )
 
     # assert
-    remaining_members = db_session.query(ComplexGroupComplexAssociation.complex_uuid
-                                        ).filter(ComplexGroupComplexAssociation.group_uuid == group_uuid)
+    remaining_members = db_session.query(
+        ComplexGroupComplexAssociation.complex_uuid
+    ).filter(ComplexGroupComplexAssociation.group_uuid == group_uuid)
 
     remaining_members = {m.complex_uuid for m in remaining_members}
     assert remaining_members == {complexes[0].uuid}
@@ -48,8 +48,9 @@ def test_add_group_associations(fixtures, db_session):
     tasks.add_group_associations(db_session, ComplexGroupComplexAssociation, group_uuid, new_complexes)
 
     # assert
-    members = db_session.query(ComplexGroupComplexAssociation.complex_uuid
-                              ).filter(ComplexGroupComplexAssociation.group_uuid == group_uuid)
+    members = db_session.query(
+        ComplexGroupComplexAssociation.complex_uuid
+    ).filter(ComplexGroupComplexAssociation.group_uuid == group_uuid)
 
     members = {m.complex_uuid for m in members}
     assert members == {c.uuid for c in complexes} | new_complexes

@@ -120,8 +120,7 @@ MESSAGING_EXCHANGE = 'ts.messaging'
 def permission_sync_task(Permission, db_session):
     @celery.task(name='ts_auth.permissions.sync')
     def sync_permissions():
-        permissions = db_session.query(Permission).filter(Permission.is_sent == False  # noqa
-                                                         )
+        permissions = db_session.query(Permission).filter(Permission.is_sent == False)
 
         for permission in permissions:
             if permission.is_deleted:
