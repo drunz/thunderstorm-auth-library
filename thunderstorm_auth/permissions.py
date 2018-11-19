@@ -1,5 +1,4 @@
 from collections.abc import Mapping
-import warnings
 
 from sqlalchemy import Column, String, Boolean
 from sqlalchemy.dialects.postgresql import UUID
@@ -10,49 +9,27 @@ from thunderstorm_auth.exceptions import (InsufficientPermissions, BrokenTokenEr
 _REGISTERED_PERMISSIONS = set()
 
 
-def validate_permission(token_data, service_name, permission):
+def validate_permission(token_data, permission, service_name, func_validate):
     """Validate a permission is present in a token string
 
     Args:
         token_data (dict): The data from the auth token
-        service_name (str): The name of the service
         permission (str): The permission string required
+        service_name (str): The name of the service
+        func_validate (callable): function that will validate the permission, needs to
+                                  accept token_data and permission string as params
 
     Raises:
         BrokenTokenError: If the token data is not valid
         InsufficientPermissions: If the token does not contain the required
                                  permission
     """
-    warnings.warn('Token field `permissions` is being deprecated', DeprecationWarning)
     if not isinstance(token_data, Mapping):
         raise BrokenTokenError('Token data must be structured as a dict')
-    elif not isinstance(token_data.get('permissions'), Mapping):
-        raise BrokenTokenError('Token permissions must be structured as a dict')
-    elif permission not in token_data['permissions'].get(service_name, []):
+    elif not isinstance(token_data.get('roles'), list):
+        raise BrokenTokenError('Token roles must be structured as a list')
+    elif not func_validate(token_data, permission):
         raise InsufficientPermissions('You do not have the permission required to carry out this action')
-
-
-# ##### # TODO @shipperizer use this for TSA-720 ##### #
-# def validate_permission(token_data, permission, func_validate):
-#     """Validate a permission is present in a token string
-#
-#     Args:
-#         token_data (dict): The data from the auth token
-#         permission (str): The permission string required
-#         func_validate (callable): function that will validate the permission, needs to
-#                                   accept token_data and permission string as params
-#
-#     Raises:
-#         BrokenTokenError: If the token data is not valid
-#         InsufficientPermissions: If the token does not contain the required
-#                                  permission
-#     """
-#     if not isinstance(token_data, Mapping):
-#         raise BrokenTokenError('Token data must be structured as a dict')
-#     elif not isinstance(token_data.get('roles'), list):
-#         raise BrokenTokenError('Token roles must be structured as a list')
-#     elif not func_validate(token_data, permission):
-#         raise InsufficientPermissions('You do not have the permission required to carry out this action')
 
 
 def register_permission(permission):

@@ -2,6 +2,7 @@ from datetime import timedelta
 import functools
 from os import environ
 from unittest.mock import patch
+from uuid import uuid4
 
 from factory.alchemy import SQLAlchemyModelFactory
 import flask
@@ -16,6 +17,7 @@ from thunderstorm_auth.datastore import SQLAlchemySessionAuthStore
 from thunderstorm_auth.exceptions import HTTPError
 from thunderstorm_auth.flask import ts_auth_required, init_ts_auth
 from thunderstorm_auth.roles import _init_role_tasks
+from thunderstorm_auth.setup import init_ts_auth_tasks
 
 from test import models
 import test.fixtures
@@ -57,8 +59,13 @@ def jwk_set(jwk, key_id, alternate_jwk, alternate_key_id):
 
 
 @pytest.fixture
-def access_token_payload():
-    return {'username': 'test-user', 'token_type': 'access', 'groups': [], 'roles': [], 'permissions': {}}
+def role_uuid():
+    return uuid4()
+
+
+@pytest.fixture
+def access_token_payload(role_uuid):
+    return {'username': 'test-user', 'token_type': 'access', 'groups': [], 'roles': [str(role_uuid)]}
 
 
 @pytest.fixture
@@ -85,34 +92,19 @@ def access_token(make_token, access_token_payload):
 
 
 @pytest.fixture
-def access_token_with_permissions(make_token, access_token_payload):
-    access_token_payload['permissions'] = {
-        # service name needs to match the service name defined in flask_app fixture
-        'test-service': ['perm-a', 'basic']
-    }
+def access_token_with_permissions(make_token, access_token_payload, role_setup):
     return make_token(access_token_payload)
 
 
 @pytest.fixture
 def access_token_with_permissions_wrong_service(make_token, access_token_payload):
-    access_token_payload['permissions'] = {'other-service': ['perm-a']}
+    access_token_payload['roles'] = [str(uuid4())]
     return make_token(access_token_payload)
 
 
 @pytest.fixture
-def access_token_expired(make_token, access_token_payload):
-    access_token_payload['permissions'] = {
-        # service name needs to match the service name defined in flask_app fixture
-        'test-service': ['perm-a', 'basic']
-    }
+def access_token_expired_with_permissions(make_token, access_token_payload, role_setup):
     lifetime = timedelta(hours=-1)
-    return make_token(access_token_payload, lifetime=lifetime)
-
-
-@pytest.fixture
-def access_token_expired_with_permissions(make_token, access_token_payload):
-    lifetime = timedelta(hours=-1)
-    access_token_payload['permissions'] = {'test-service': ['perm-a']}
     return make_token(access_token_payload, lifetime=lifetime)
 
 
@@ -182,6 +174,14 @@ def flask_app(datastore, jwk_set):
 
 
 @pytest.fixture
+def role_setup(fixtures, role_uuid):
+    test.fixtures.Role(
+        uuid=role_uuid,
+        permissions=[test.fixtures.Permission(permission=p, service_name='test-service') for p in ['perm-a', 'basic']]
+    )
+
+
+@pytest.fixture
 def role_tasks(db_session):
     datastore = SQLAlchemySessionAuthStore(
         db_session, models.Role, models.Permission, models.RolePermissionAssociation
@@ -196,8 +196,9 @@ def datastore(db_session):
 
 
 @pytest.fixture
-def celery(celery_app, datastore):
-    _init_role_tasks(datastore)
+def celery(celery_app, datastore, db_session):
+    init_ts_auth_tasks(celery_app, db_session, [models.ComplexGroupComplexAssociation], datastore, False)
+
     return celery_app
 
 
