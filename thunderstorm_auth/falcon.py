@@ -1,6 +1,5 @@
 import json
 import logging
-import warnings
 
 from thunderstorm_auth import TOKEN_HEADER
 from thunderstorm_auth.decoder import decode_token
@@ -27,14 +26,16 @@ class TsAuthMiddleware:
     def __init__(
             self,
             jwks,
+            datastore=None,
             expiration_leeway=0,
             with_permission=None,
-            service_name=None,
+            service_name=None
     ):
         """Falcon middleware for Thunderstorm Authentication.
 
         Args:
             jwks (dict): JWK Set containing JWKs (dicts) which may be used to decode an auth token
+            datastore (AuthDatastore object): datastore used for the auth data retrieval
             expiration_leeway (int): Optional number of seconds of lenience when
                 calculating token expiry.
 
@@ -45,17 +46,19 @@ class TsAuthMiddleware:
             raise ThunderstormAuthError('Cannot create Falcon middleware as Falcon is not installed.')
 
         self.expiration_leeway = expiration_leeway
+        self.datastore = datastore
         self.jwks = jwks
         self.with_permission = with_permission
         self.service_name = service_name
 
         if not self.with_permission:
-            logger.error('Auth configured with no permission')
-            warnings.warn('Route with auth but no permission. ' 'In future this will not be allowed.')
+            raise ThunderstormAuthError('Route with auth but no permission is not allowed.')
+
+        if not self.datastore:
+            raise ThunderstormAuthError('Datastore needs to be set and a valid AuthDatastore object')
 
     def process_resource(self, req, res, resource, params):
         requires_auth = getattr(resource, 'requires_auth', False)
-
         if requires_auth:
             try:
                 decoded_token_data = self._decode_token(req)
@@ -66,6 +69,12 @@ class TsAuthMiddleware:
             user = User.from_decoded_token(decoded_token_data)
             req.context[USER_CONTEXT_KEY] = user
 
+    def func_validate(self, token_data, permission):
+        role_uuids = token_data.get('roles')
+        return self.datastore.is_permission_in_roles(
+            permission_string=permission, role_uuids=role_uuids
+        )
+
     def _decode_token(self, request):
         token = _get_token(request)
         if not self.jwks.get('keys'):
@@ -74,7 +83,9 @@ class TsAuthMiddleware:
 
     def _validate_permission(self, token_data):
         if self.with_permission:
-            permissions.validate_permission(token_data, self.service_name, self.with_permission)
+            permissions.validate_permission(token_data, self.with_permission, self.service_name, self.func_validate)
+        else:
+            logger.error('Route with auth but no permission')
 
 
 def _get_token(request):

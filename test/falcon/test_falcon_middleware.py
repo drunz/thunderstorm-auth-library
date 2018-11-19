@@ -9,14 +9,14 @@ def test_endpoint_returns_200_when_auth_not_required(client, resource):
     assert response.status_code == 200, response.json
 
 
-def test_user_with_decoded_token_data_added_to_req_context(falcon_app, client, access_token_with_permissions):
+def test_user_with_decoded_token_data_added_to_req_context(falcon_app, client, access_token_with_permissions, role_uuid):
     class AssertUserResource:
 
         requires_auth = True
 
         def on_get(self, req, resp):
             user = req.context['ts_user']
-            assert user == User(username='test-user', roles=[], permissions={'test-service': ['perm-a', 'basic']}, groups=[])
+            assert user == User(username='test-user', roles=[str(role_uuid)], groups=[])
 
     falcon_app.add_route('/assert-user', AssertUserResource())
 
@@ -43,8 +43,8 @@ def test_endpoint_returns_401_with_malformed_token(client, malformed_token):
     assert response.status_code == 401, response.json
 
 
-def test_endpoint_returns_401_with_expired_token(client, access_token_expired):
-    headers = {'X-Thunderstorm-Key': access_token_expired}
+def test_endpoint_returns_401_with_expired_token(client, access_token_expired_with_permissions):
+    headers = {'X-Thunderstorm-Key': access_token_expired_with_permissions}
 
     response = client.simulate_get('/', headers=headers)
 
