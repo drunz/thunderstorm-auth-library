@@ -45,13 +45,13 @@ def test_endpoint_returns_200_with_proper_token(access_token_with_permissions, f
     assert response.status_code == 200
 
 
-def test_user_with_decoded_token_added_to_g(access_token_with_permissions, flask_app):
+def test_user_with_decoded_token_added_to_g(role_uuid, access_token_with_permissions, flask_app):
     with flask_app.app_context():
         headers = {'X-Thunderstorm-Key': access_token_with_permissions}
         flask_app.test_client().get('/', headers=headers)
 
         assert g.user == User(
-            username='test-user', roles=[], permissions={'test-service': ['perm-a', 'basic']}, groups=[]
+            username='test-user', roles=[str(role_uuid)], groups=[]
         )
 
 
@@ -62,17 +62,17 @@ def test_endpoint_returns_401_with_malformed_token(malformed_token, flask_app):
     assert response.status_code == 401
 
 
-def test_endpoint_returns_401_with_expired_token(access_token_expired, flask_app):
-    headers = {'X-Thunderstorm-Key': access_token_expired}
+def test_endpoint_returns_401_with_expired_token(access_token_expired_with_permissions, flask_app):
+    headers = {'X-Thunderstorm-Key': access_token_expired_with_permissions}
     response = flask_app.test_client().get('/', headers=headers)
 
     assert response.status_code == 401
 
 
-def test_endpoint_returns_200_when_expired_token_falls_within_leeway(flask_app, access_token_expired):
+def test_endpoint_returns_200_when_expired_token_falls_within_leeway(flask_app, access_token_expired_with_permissions):
     with flask_app.app_context():
         flask_app.config['TS_AUTH_LEEWAY'] = 3601
-        headers = {'X-Thunderstorm-Key': access_token_expired}
+        headers = {'X-Thunderstorm-Key': access_token_expired_with_permissions}
 
         response = flask_app.test_client().get('/', headers=headers)
 
