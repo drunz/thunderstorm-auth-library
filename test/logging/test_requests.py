@@ -20,10 +20,12 @@ def test_get_with_headers(mock_get_request_id, mock_get):
 
     requests.get('/', headers={'foo': 'bar'})
 
-    mock_get.assert_called_with('/', headers={
-        'TS-Request-ID': 'request-id',
-        'foo': 'bar',
-    })
+    mock_get.assert_called_with(
+        '/', headers={
+            'TS-Request-ID': 'request-id',
+            'foo': 'bar',
+        }
+    )
 
 
 @mock.patch('thunderstorm_auth.logging.requests._get')
@@ -33,6 +35,8 @@ def test_get_with_request_id(mock_get_request_id, mock_get):
 
     requests.get('/', headers={'TS-Request-ID': 'my-id'})
 
-    mock_get.assert_called_with('/', headers={
-        'TS-Request-ID': 'my-id',
-    })
+    mock_get.assert_called_with(
+        '/', headers={
+            'TS-Request-ID': 'my-id',
+        }
+    )

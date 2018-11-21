@@ -1,27 +1,25 @@
 version: '2'
 
 services:
-  python34:
-    image: "${REGISTRY}/artsalliancemedia/python:3.4-slim"
-    command: make test
-    working_dir: /var/app
-    environment:
-      - DB_NAME=test_auth_lib_py34
-    volumes:
-      - ./:/var/app
-    depends_on:
-      - postgres
-
   python35:
     image: "${REGISTRY}/artsalliancemedia/python:3.5-slim"
     command: make test
     working_dir: /var/app
     environment:
       - DB_NAME=test_auth_lib_py35
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASS=postgres
+      - REDIS_HOST=redis
+      - REDIS_DB=5
+      - MEMCACHED_HOST=memcached
+      - MEMCACHED_KEY=35
     volumes:
       - ./:/var/app
     depends_on:
       - postgres
+      - redis
+      - memcached
 
   python36:
     image: "${REGISTRY}/artsalliancemedia/python:3.6-slim"
@@ -29,13 +27,28 @@ services:
     working_dir: /var/app
     environment:
       - DB_NAME=test_auth_lib_py36
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASS=postgres
+      - REDIS_HOST=redis
+      - REDIS_DB=6
+      - MEMCACHED_HOST=memcached
+      - MEMCACHED_KEY=36
     volumes:
       - ./:/var/app
     depends_on:
       - postgres
+      - redis
+      - memcached
 
   postgres:
     image: postgres:9.6
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+
+  redis:
+    image: redis:alpine
+
+  memcached:
+    image: memcached:latest

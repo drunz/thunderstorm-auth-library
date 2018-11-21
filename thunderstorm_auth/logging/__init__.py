@@ -9,15 +9,9 @@ import datetime
 
 from pythonjsonlogger.jsonlogger import JsonFormatter as BaseJSONFormatter
 
+__all__ = ['JSONFormatter', 'get_request_id']
 
-__all__ = [
-    'JSONFormatter', 'get_request_id'
-]
-
-
-REQUIRED_FIELDS = [
-    'name', 'levelname', 'pathname', 'lineno'
-]
+REQUIRED_FIELDS = ['name', 'levelname', 'pathname', 'lineno']
 
 
 class JSONFormatter(BaseJSONFormatter):
@@ -25,6 +19,7 @@ class JSONFormatter(BaseJSONFormatter):
 
     Adds thunderstorm fields to JSON logging
     """
+
     def __init__(self, *args, **kwargs):
         self._ts_log_type = kwargs.pop('ts_log_type', 'unknown')
         self._ts_service = kwargs.pop('ts_service', 'unknown')
@@ -38,9 +33,7 @@ class JSONFormatter(BaseJSONFormatter):
         log_record = self._add_timestamp(log_record, record)
 
     def _add_required_fields(self, log_record, record):
-        log_record.update({
-            name: getattr(record, name) for name in REQUIRED_FIELDS
-        })
+        log_record.update({name: getattr(record, name) for name in REQUIRED_FIELDS})
 
         return log_record
 

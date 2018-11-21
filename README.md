@@ -7,8 +7,7 @@
 **Note: This is a public repo**
 
 Thunderstorm auth library is a package mainly for integrating authentication
-provided by the
-[Thunderstorm User service](https://github.com/artsalliancemedia/thunderstorm-user-service).
+provided by the [&#169;Thunderstorm User service](https://github.com/artsalliancemedia/user-service).
 It also provides access to other common tools such as logging until we find a
 better place for them.
 
@@ -22,7 +21,7 @@ This document provides instructions and examples for
 - [Installation](#installation)
 - [Authentication](#authentication)
   - [Basic usage](#basic-usage)
-  - [Permissions](#permissions)
+  - [Roles and Permissions](#permissions)
 - [Logging](#logging)
 - [Development](#development)
 - [Testing](#testing)
@@ -44,24 +43,23 @@ e.g. for Flask:
 
 ## Authentication
 
-Authentication is provided by the [user service](https://github.com/artsalliancemedia/thunderstorm-user-service)
+Authentication is provided by the [user service](https://github.com/artsalliancemedia/user-service)
 with [JWTs](https://jwt.io/).
 
 You will need to include the `TS_AUTH_JWKS` config variable in your Flask
 config. The JWKs stored in this variable will be used for decoding JWTs.
-See [Thunderstorm User Service](https://github.com/artsalliancemedia/thunderstorm-user-service#using-your-jwt).
+See [Thunderstorm User Service](https://github.com/artsalliancemedia/user-service#using-your-jwt).
 
 ### Basic usage
 \[[Falcon](./docs/falcon.md#basic-usage)\]
 
-The following decorator will make your views require the JWT issued by the
-`thunderstorm-user-service`.
+The following decorator will make your views require the JWT issued by the `user-service`.
 
 ```python
 from thunderstorm_auth.flask import ts_auth_required
 
 @route('/hello', methods=['GET'])
-@ts_auth_required
+@ts_auth_required(with_permission='read')
 def hello():
     return jsonify({'message': 'hello world'})
 ```
@@ -72,12 +70,12 @@ The authenticated user object can be accessed through the `flask.g`.
 from flask import g
 
 @route('/hello', methods=['GET'])
-@ts_auth_required
+@ts_auth_required(with_permission='read')
 def hello():
     return jsonify({'message': f'hello {g.user}'})
 ```
 
-The user object has three properties, `username`, `permissions` and `groups`.
+The user object has four properties, `username`, `roles`, `permissions` (to be deprecated) and `groups`.
 
 When making a request to this endpoint, you must supply your JWT in a HTTP
 header called `X-Thunderstorm-Key`.
@@ -131,28 +129,55 @@ Server: Werkzeug/0.12.2 Python/3.5.3
 
 Each service owns it's permissions so the first thing that must be done to
 start integrating permissions is to add a `Permission` model to their database.
+Also each service is proxying `Roles` and `RolePermissionAssociation` in its database
+to allow future functionalities around roles and aso the removal of `permissions` form the token.
+
 At the moment we only support SQLAlchemy models.
 
 ```python
-from thunderstorm_auth.permissions import create_permission_model
+from sqlalchemy.ext.declarative import declarative_base
+from thunderstorm_auth.permissions import PermissionMixin
+from thunderstorm_auth.roles import RoleMixin, RolePermissionAssociationMixin
 
-Permission = create_permission_model(Base)
+
+Base = declarative_base()
+
+class Role(Base, RoleMixin):
+    pass
+
+
+class RolePermissionAssociation(Base, RolePermissionAssociationMixin):
+    pass
+
+
+class Permission(Base, PermissionMixin):
+    pass
 ```
 
-Once you have a permission model you can integrate it with your flask app
+Once you have a role, permission and the association models you can integrate it with your flask app.
 to give you access to the permission management CLI commands.
 
 ```python
-from thunderstorm_auth.flask import init_auth
+from thunderstorm_auth.datastore import SQLAlchemySessionAuthStore
+from thunderstorm_auth.flask import init_ts_auth
 
 from .database import db
-from .models import Permission
+from .models import Role, Permission, RolePermissionAssociation
 
 
 def init_app(app):
     """Flask app initialisation and bootstrap"""
-    init_auth(app, db.session, Permission)
+    app.ts_auth = init_ts_auth(
+        app,
+        SQLAlchemySessionAuthStore(
+          db.session, Role, Permission, RolePermissionAssociation
+        )
+    )
 ```
+
+the [SQLAlchemySessionAuthStore](https://github.com/artsalliancemedia/thunderstorm-auth-library/blob/master/thunderstorm_auth/datastore.py#L121) is an object that is used to control access to the storage layer, it inherits from a set of base classes and you can customized your own datastore.
+The [SQLAlchemySessionAuthStore](https://github.com/artsalliancemedia/thunderstorm-auth-library/blob/master/thunderstorm_auth/datastore.py#L121) is an object that is used to control access to the storage layer, it inherits from a set of base classes which case be used to create custom datastore objects to support your ORM of choice.
+
 
 Now that this is integrated you will be able to manage your permissions from
 the flask CLI (we haven't created any permissions yet so there won't be any).

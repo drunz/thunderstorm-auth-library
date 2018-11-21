@@ -1,9 +1,6 @@
 from unittest import mock
 
-from thunderstorm_auth.logging.celery import (
-    get_celery_request_id,
-    CeleryTaskFilter
-)
+from thunderstorm_auth.logging.celery import (get_celery_request_id, CeleryTaskFilter)
 
 
 @mock.patch('thunderstorm_auth.logging.celery.get_current_task')
@@ -34,9 +31,7 @@ def test_celery_request_id_passed_in_request():
 
 @mock.patch('thunderstorm_auth.logging.celery.get_celery_request_id')
 @mock.patch('thunderstorm_auth.logging.celery.get_current_task')
-def test_celery_task_filter_with_task_and_request(
-    mock_get_current_task, mock_get_celery_request_id, record
-):
+def test_celery_task_filter_with_task_and_request(mock_get_current_task, mock_get_celery_request_id, record):
     # arrange
     mock_task = mock.Mock()
     mock_task.request = mock.Mock()
@@ -56,9 +51,7 @@ def test_celery_task_filter_with_task_and_request(
 
 
 @mock.patch('thunderstorm_auth.logging.celery.get_current_task')
-def test_celery_task_filter_with_no_task(
-    mock_get_current_task, record
-):
+def test_celery_task_filter_with_no_task(mock_get_current_task, record):
     # arrange
     mock_get_current_task.return_value = None
     filter = CeleryTaskFilter()
@@ -73,9 +66,7 @@ def test_celery_task_filter_with_no_task(
 
 
 @mock.patch('thunderstorm_auth.logging.celery.get_current_task')
-def test_celery_task_filter_with_task_no_request(
-    mock_get_current_task, record
-):
+def test_celery_task_filter_with_task_no_request(mock_get_current_task, record):
     # arrange
     mock_task = mock.Mock()
     mock_task.request = None

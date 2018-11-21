@@ -15,6 +15,7 @@ lint:
 
 test: lint
 	pytest \
+	  -vv \
 		--cov thunderstorm_auth \
 		--cov-report xml \
 		--cov-append \

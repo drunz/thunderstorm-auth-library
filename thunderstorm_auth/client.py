@@ -92,9 +92,7 @@ class AssumedIdentityAuthenticator(Authenticator):
     def refresh_access_token(self):
         try:
             resp = self._client.post(
-                '{}/api/v1/auth/assume-identity'.format(
-                    self._client.authenticator.user_service_url
-                ),
+                '{}/api/v1/auth/assume-identity'.format(self._client.authenticator.user_service_url),
                 json={'token': self.access_token},
                 headers={'X-Thunderstorm-Key': self._client.authenticator.access_token}
             )
@@ -123,16 +121,13 @@ class Client:
         >>> end_user_client = client.assume_identity(end_user_access_token)
         >>> end_user_client.get(some_url)
     """
+
     def __init__(self, authenticator: Authenticator):
         self.authenticator = authenticator
 
     @staticmethod
     def direct(user_service_url, jwks, refresh_token, access_token=None):
-        return Client(
-            DirectIdentityAuthenticator(
-                user_service_url, jwks, refresh_token, access_token=access_token
-            )
-        )
+        return Client(DirectIdentityAuthenticator(user_service_url, jwks, refresh_token, access_token=access_token))
 
     def assume_identity(self, assume_identity):
         return Client(AssumedIdentityAuthenticator(self, assume_identity))

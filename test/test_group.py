@@ -22,9 +22,7 @@ def test_create_complex_group_model():
     base = declarative_base()
 
     # act
-    model = group.create_group_association_model(
-        group.COMPLEX_GROUP_TYPE, base
-    )
+    model = group.create_group_association_model(group.COMPLEX_GROUP_TYPE, base)
 
     # assert
     assert model.__name__ == 'ComplexGroupAssociation'

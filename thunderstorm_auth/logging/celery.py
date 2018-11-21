@@ -26,7 +26,6 @@ from celery._state import get_current_task
 
 from . import JSONFormatter, get_request_id, _register_id_getter
 
-
 _CELERY_X_HEADER = 'x_request_id'
 
 
@@ -57,6 +56,7 @@ class CeleryTaskFilter(logging.Filter):
     This adds in the task name and ID and also the request ID if it was
     added by the `CeleryRequestIDTask'
     """
+
     def filter(self, record):
         task = get_current_task()
         if task and task.request:
@@ -78,6 +78,7 @@ class CeleryRequestIDTask(CeleryTask):
     in celery task logs. Use it by setting it to the `Task` attribute of
     your celery app.
     """
+
     def apply_async(self, *args, **kwargs):
         kwargs.setdefault('headers', {})
         request_id = get_request_id()
@@ -93,32 +94,22 @@ def on_celery_setup_logging(service_name):
     override celery's logging. It must be hooked up with ``weak=False``
     to avoid the anonymous function getting garbage collected.
     """
+
     def _get_celery_handler(log_format):
         handler = logging.StreamHandler()
-        formatter = JSONFormatter(
-            log_format,
-            ts_log_type='celery',
-            ts_service=service_name
-        )
+        formatter = JSONFormatter(log_format, ts_log_type='celery', ts_service=service_name)
         handler.setFormatter(formatter)
 
         return handler
 
     def do_setup_logging(**kwargs):
-        logging.getLogger().addHandler(
-            _get_celery_handler('%(name)s %(levelname)s %(message)s')
-        )
+        logging.getLogger().addHandler(_get_celery_handler('%(name)s %(levelname)s %(message)s'))
 
-        handler = _get_celery_handler(
-            '[%(levelname)s/%(processName)s] %(message)s'
-        )
+        handler = _get_celery_handler('[%(levelname)s/%(processName)s] %(message)s')
         celery.utils.log.worker_logger.addHandler(handler)
         celery.utils.log.worker_logger.propagate = False
 
-        handler = _get_celery_handler(
-            '[%(levelname)s/%(processName)s]'
-            '%(task_name)s %(task_id)s %(message)s'
-        )
+        handler = _get_celery_handler('[%(levelname)s/%(processName)s]' '%(task_name)s %(task_id)s %(message)s')
         handler.addFilter(CeleryTaskFilter())
         celery.utils.log.task_logger.addHandler(handler)
         celery.utils.log.task_logger.propagate = False

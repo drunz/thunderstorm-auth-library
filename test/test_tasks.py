@@ -45,10 +45,7 @@ def test_create_group_sync_task(group_model):
 @mock.patch('thunderstorm_auth.tasks.get_current_members')
 @mock.patch('thunderstorm_auth.tasks.delete_group_associations')
 @mock.patch('thunderstorm_auth.tasks.add_group_associations')
-def test_group_sync_task_run(
-    add_group_associations, delete_group_associations, get_current_members,
-    group_model
-):
+def test_group_sync_task_run(add_group_associations, delete_group_associations, get_current_members, group_model):
     # arrange
     db_session = mock.Mock(name='db_session')
     task = tasks.group_sync_task(group_model, db_session)
@@ -65,23 +62,9 @@ def test_group_sync_task_run(
     task(group_uuid, updated_members)
 
     # assert
-    get_current_members.assert_called_with(
-        db_session,
-        group_model,
-        group_uuid
-    )
-    delete_group_associations.assert_called_with(
-        db_session,
-        group_model,
-        group_uuid,
-        {all_members[0]}
-    )
-    add_group_associations.assert_called_with(
-        db_session,
-        group_model,
-        group_uuid,
-        {all_members[3]}
-    )
+    get_current_members.assert_called_with(db_session, group_model, group_uuid)
+    delete_group_associations.assert_called_with(db_session, group_model, group_uuid, {all_members[0]})
+    add_group_associations.assert_called_with(db_session, group_model, group_uuid, {all_members[3]})
 
 
 @mock.patch('thunderstorm_auth.tasks.send_task')
@@ -110,14 +93,12 @@ def test_sync_permissions(mock_send_task):
     mock_send_task.assert_has_calls(
         [
             mock.call(
-                'permissions.delete',
-                ('0fc466f6-101b-11e8-9cd1-4a0004692f50',),
+                'permissions.delete', ('0fc466f6-101b-11e8-9cd1-4a0004692f50', ),
                 exchange='ts.messaging',
                 routing_key='permissions.delete'
             ),
             mock.call(
-                'permissions.new',
-                ('255e8a1e-101b-11e8-8d15-4a0004692f50', 'test', 'perm2'),
+                'permissions.new', ('255e8a1e-101b-11e8-8d15-4a0004692f50', 'test', 'perm2'),
                 exchange='ts.messaging',
                 routing_key='permissions.new'
             )

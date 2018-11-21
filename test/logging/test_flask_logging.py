@@ -17,9 +17,7 @@ def test_flask_request_id_from_global(flask_app):
 
 
 def test_flask_request_id_from_header(flask_app):
-    headers = {
-        'TS-Request-ID': 'header-request-id'
-    }
+    headers = {'TS-Request-ID': 'header-request-id'}
     with flask_app.test_request_context('/', headers=headers):
         assert get_flask_request_id() == 'header-request-id'
 
