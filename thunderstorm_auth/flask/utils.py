@@ -31,20 +31,17 @@ def _get_jwks():
         raise AuthJwksNotSet(message)
 
 
-# ##### # TODO @shipperizer use this for TSA-720 # ##### #
-# def func_validate(token_data, permission):
-#     role_uuids = token_data.get(roles)
-#     return current_app.extensions['ts_auth'].datastore.is_permission_in_roles(
-#         permission_string=permission, role_uuids=role_uuids
-#     )
+def func_validate(token_data, permission):
+    role_uuids = token_data.get('roles')
+    return current_app.extensions['ts_auth'].datastore.is_permission_in_roles(
+        permission_string=permission, role_uuids=role_uuids
+    )
 
 
 def _validate_permission(token_data, permission):
     if permission:
         service_name = current_app.config['TS_SERVICE_NAME']
-        permissions.validate_permission(token_data, service_name, permission)
-        # ##### # TODO @shipperizer use this for TSA-720 # ##### #
-        # permissions.validate_permission(token_data, permission, func_validate)
+        permissions.validate_permission(token_data, permission, service_name, func_validate)
     else:
         current_app.logger.error('Route with auth but no permission: {}'.format(request.path))
 

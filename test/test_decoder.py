@@ -18,17 +18,17 @@ def test_decode_token_raises_if_jwt_headers_missing(token_with_no_headers, jwk_s
         decode_token(token_with_no_headers, jwk_set)
 
 
-def test_decode_token_raises_if_jwt_expired(access_token_expired, jwk_set):
+def test_decode_token_raises_if_jwt_expired(access_token_expired_with_permissions, jwk_set):
     with pytest.raises(ExpiredTokenError):
-        decode_token(access_token_expired, jwk_set)
+        decode_token(access_token_expired_with_permissions, jwk_set)
 
 
-def test_decode_token_does_not_raise_if_jwt_expired_but_verify_exp_false(access_token_expired, jwk_set):
-    assert decode_token(access_token_expired, jwk_set, options={'verify_exp': False})
+def test_decode_token_does_not_raise_if_jwt_expired_but_verify_exp_false(access_token_expired_with_permissions, jwk_set):
+    assert decode_token(access_token_expired_with_permissions, jwk_set, options={'verify_exp': False})
 
 
-def test_decode_token_does_not_raise_if_jwt_expired_but_leeway_is_set(access_token_expired, jwk_set):
-    assert decode_token(access_token_expired, jwk_set, leeway=3605)
+def test_decode_token_does_not_raise_if_jwt_expired_but_leeway_is_set(access_token_expired_with_permissions, jwk_set):
+    assert decode_token(access_token_expired_with_permissions, jwk_set, leeway=3605)
 
 
 def test_decode_token_with_jwk_set_raises_broken_token_error_if_token_is_malformed(malformed_token, jwk_set):

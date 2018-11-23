@@ -23,7 +23,16 @@ node('aam-identity-prodcd') {
     ])
 
     stage('Checkout') {
-        checkout scm
+        checkout(
+          [
+            $class: 'GitSCM',
+            branches: [[name: "refs/heads/${env.BRANCH_NAME}"]],
+            extensions: [[$class: 'CloneOption', depth: 0, honorRefspec: true, noTags: false, reference: '', shallow: false]],
+            userRemoteConfigs: [
+              [credentialsId: 'aamdeployuser-user-pwd', name: 'origin', url: 'https://github.com/artsalliancemedia/thunderstorm-auth-library.git']
+            ]
+          ]
+        )
     }
 
     try {
@@ -54,6 +63,22 @@ node('aam-identity-prodcd') {
 
         // master branch builds are pushed to Github
         if (env.BRANCH_NAME == 'master') {
+
+            stage('Changelog since last merge') {
+                def last_merge = sh (script: 'git rev-list --min-parents=2 --reverse --max-count=2 HEAD | head -1', returnStdout: true)
+                def current_merge = sh (script: 'git rev-list --min-parents=2 --reverse --max-count=2 HEAD | tail -1', returnStdout: true)
+
+                description = gitChangelog returnType: 'STRING',
+                 gitHub: [api: 'https://api.github.com/repos/artsalliancemedia/agent-service', issuePattern: '', token: env.GITHUB_TOKEN],
+                 from: [type: 'COMMIT', value: last_merge.trim()],
+                 to: [type: 'COMMIT', value: current_merge.trim()],
+                 template: prTemplate()
+
+                echo "### Changelog ###"
+                echo "${description}"
+                echo "### Changelog ###"
+            }
+
             stage('Create Github Release') {
                 if (is_release == 0) {
                   // extract application version
@@ -69,7 +94,7 @@ node('aam-identity-prodcd') {
                         git remote set-url origin git@github.com:artsalliancemedia/${repo}.git
                         git tag -f v${version}
                         git push --tags
-                        github-release release -u ${user} -r ${repo} -t v${version}
+                        github-release release -u ${user} -r ${repo} -t v${version} -d '${description}'
                         github-release upload -u '${user}' -r '${repo}' -t 'v${version}' -n 'thunderstorm-auth-lib-${version}.tar.gz' -f 'dist/thunderstorm-auth-lib-${version}.tar.gz'
                     """
                   }

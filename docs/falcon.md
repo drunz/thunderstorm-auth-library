@@ -24,8 +24,15 @@ For the app config:
 ```python
 import os
 from thunderstorm_auth.falcon import TsAuthMiddleware
+from . import models
+from . import db
 
-auth_middleware = TsAuthMiddleware(os.environ['TS_AUTH_JWKS'])
+auth_middleware = TsAuthMiddleware(
+  os.environ['TS_AUTH_JWKS'],
+  SQLAlchemySessionAuthStore(
+        db.session, models.Role, models.Permission, models.RolePermissionAssociation
+  )
+)
 falcon_app = falcon.API(middleware=auth_middleware)
 falcon_app.add_route('/', MyResource())
 ```
@@ -74,7 +81,7 @@ auth_middleware = TsAuthMiddleware(
 Now a request through this middleware will only be allowed if it has a valid
 authentication token and that token contains the `my-permission` permission
 for the given service. In order for that to be possible the user service needs
-to be made aware of this new permission. See the 
+to be made aware of this new permission. See the
 [Flask docs](/README.md#defining-permissions) managing the Permission model.
 
 #### Deploying permissions

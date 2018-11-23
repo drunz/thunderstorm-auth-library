@@ -41,6 +41,15 @@ e.g. for Flask:
 > pip install thunderstorm-auth-lib[flask]
 ```
 
+# ############################### ## Special installation notes ## ############################### #
+
+* Upgrading from `<v0.5` to `v0.6`: **It is strongly advised to do a 2-step upgrade, first to `v0.5` and after at least 1 hour upgrade to `v0.6`**
+The reason for this is due to the scheduling of roles broadcasting which happens once every *60minutes*, so if you upgrade straight to `v0.6` there is a chance that your application will not function correctly for up to *one hour* (no roles would have been received and each api call would result in a `401 UNAUTHORIZED`). `v.0.5` is backwards compatible (by which we mean it can still use permissions in the token) which is why we recommend upgrading to that first for one hour so that when you move to `v.0.6` the roles will have been cached locally at that point.
+  no roles would have been received and each api call would result in a `401 UNAUTHORIZED`, therefore *1h of missing data and not functioning services*
+
+
+# ################################################################################################ #
+
 ## Authentication
 
 Authentication is provided by the [user service](https://github.com/artsalliancemedia/user-service)
@@ -125,7 +134,7 @@ Server: Werkzeug/0.12.2 Python/3.5.3
 }
 ```
 
-### Permissions
+### Roles and Permissions
 
 Each service owns it's permissions so the first thing that must be done to
 start integrating permissions is to add a `Permission` model to their database.
@@ -175,7 +184,6 @@ def init_app(app):
     )
 ```
 
-the [SQLAlchemySessionAuthStore](https://github.com/artsalliancemedia/thunderstorm-auth-library/blob/master/thunderstorm_auth/datastore.py#L121) is an object that is used to control access to the storage layer, it inherits from a set of base classes and you can customized your own datastore.
 The [SQLAlchemySessionAuthStore](https://github.com/artsalliancemedia/thunderstorm-auth-library/blob/master/thunderstorm_auth/datastore.py#L121) is an object that is used to control access to the storage layer, it inherits from a set of base classes which case be used to create custom datastore objects to support your ORM of choice.
 
 
@@ -190,15 +198,26 @@ Finally we need to integrate the sync task with our celery app so that our
 permissions can be synced up to the user service.
 
 ```python
-from thunderstorm_auth.setup import init_permissions
+from thunderstorm_auth.setup import init_permissions, init_ts_auth_tasks
 
 from .database import db
-from .models import Permission
+from .models import Permission, ComplexGroupComplexAssociation
 
 def init_celery(celery_app):
     """Celery app initialisation"""
+    datastore = SQLAlchemySessionAuthStore(db.session, Role, Permission, RolePermissionAssociation)
     init_permissions(celery_app, db.session, Permission)
+    # this will kickstart roles and complex groups sync
+    init_ts_auth_tasks(celery_app, db.session, [ComplexGroupComplexAssociation], datastore, False)
 ```
+
+
+## **New change since `v0.5`**
+
+To initialize the tasks for groups and roles, **init_ts_auth_tasks** is now being used in place of **init_group_sync_tasks**,
+
+The former will perform the initialization of both, the **latter is back to just group initialization**
+
 
 #### Defining permissions
 

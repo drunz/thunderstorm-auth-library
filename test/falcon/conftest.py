@@ -18,9 +18,10 @@ def resource():
 
 
 @pytest.fixture
-def middleware(jwk_set):
+def middleware(jwk_set, datastore):
     return TsAuthMiddleware(
         jwk_set,
+        datastore=datastore,
         with_permission='perm-a',
         service_name='test-service',
     )

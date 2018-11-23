@@ -11,7 +11,7 @@ install:
 	pip install -r requirements-dev.txt
 
 lint:
-	flake8 thunderstorm_auth
+	flake8 thunderstorm_auth test
 
 test: lint
 	pytest \
