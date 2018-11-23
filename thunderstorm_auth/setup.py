@@ -9,7 +9,22 @@ from thunderstorm_auth.roles import _init_role_tasks, _role_task_routing_key
 EXCHANGE = kombu.Exchange('ts.messaging')
 
 
-def init_group_sync_tasks(celery_app, db_session, group_models, ensure_exchange_exists=True, datastore=None):
+def init_ts_auth_tasks(celery_app, db_session, group_models, datastore, ensure_exchange_exists=True):
+    """
+    Initialize a Celery app with a queue and sync tasks for auth group models and roles.
+
+    Args:
+        celery_app (Celery): Celery app to register the sync tasks with.
+        db_session (Session): Database session used to sync the model records.
+        group_models (list): The Thunderstorm auth group models to synchronize.
+        datastore (AuthStore): a datastore
+        ensure_exchange_exists (bool): Whether to error if exchange does not exist.
+    """
+    init_group_sync_tasks(celery_app, db_session, group_models, ensure_exchange_exists=ensure_exchange_exists)
+    _init_role_tasks(datastore)
+
+
+def init_group_sync_tasks(celery_app, db_session, group_models, ensure_exchange_exists=True):
     """
     Initialize a Celery app with a queue and sync tasks for auth group models.
 
@@ -22,14 +37,10 @@ def init_group_sync_tasks(celery_app, db_session, group_models, ensure_exchange_
         celery_app (Celery): Celery app to register the sync tasks with.
         db_session (Session): Database session used to sync the model records.
         group_models (list): The Thunderstorm auth group models to synchronize.
-        ensure_exchange_exists (bool): Whether to error if exchange does not
-                                       exist.
-       datastore (AuthStore): a datastore
+        ensure_exchange_exists (bool): Whether to error if exchange does not exist.
     """
     _register_task_queue(celery_app, group_models, ensure_exchange_exists)
     _register_sync_tasks(celery_app, db_session, group_models)
-    # TODO @shipperizer move this outta here
-    _init_role_tasks(datastore)
 
 
 def _register_task_queue(celery_app, group_models, ensure_exchange_exists):
