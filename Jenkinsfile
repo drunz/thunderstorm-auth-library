@@ -119,3 +119,9 @@ def getDockerComposeProject() {
         returnStdout: true
     ).trim()
 }
+
+def prTemplate() {
+  def template = readFile 'CHANGELOG.md'
+  // don't forget to trim or you'll get a newline in the string
+  return template.trim()
+}
