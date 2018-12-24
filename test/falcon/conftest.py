@@ -37,3 +37,19 @@ def falcon_app(resource, middleware):
 @pytest.fixture
 def client(falcon_app):
     return falcon.testing.TestClient(falcon_app)
+
+
+@pytest.fixture
+def audit_client(jwk_set, datastore, resource):
+    app = falcon.API(
+        middleware=TsAuthMiddleware(
+            jwk_set,
+            datastore=datastore,
+            with_permission='perm-a',
+            service_name='test-service',
+            auditing=True
+        )
+    )
+    app.add_route('/', resource)
+
+    return falcon.testing.TestClient(app)
