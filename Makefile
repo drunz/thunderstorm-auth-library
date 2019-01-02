@@ -1,4 +1,4 @@
-.PHONY: install lint test build clean dist release codacy
+.PHONY: install lint test clean dist release codacy
 
 
 CODACY_PROJECT_TOKEN?=fake
@@ -7,7 +7,7 @@ REGISTRY?=docker.io
 VERSION?=0.0.0
 
 install:
-	pip install -r requirements.txt
+	pip install --process-dependency-links -e .
 	pip install -r requirements-dev.txt
 
 lint:
@@ -21,9 +21,6 @@ test: lint
 		--cov-append \
 		--junit-xml results-${PYTHON_VERSION}.xml \
 		test/
-
-build:
-	pip install -e .
 
 clean:
 	rm -rf dist
