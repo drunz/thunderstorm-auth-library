@@ -134,6 +134,37 @@ Server: Werkzeug/0.12.2 Python/3.5.3
 }
 ```
 
+
+### Auditing
+
+When auditing is enabled, each request will be monitored and its data sent (with send_ts_task)
+to the `ts.messaging` exchange with the routing key `audit.data`.
+On `flask` we exploit the `after_response` hook, on `falcon` instead the `process_response` method.
+
+To enable auditing, simply pass `auditing=True` when you are instantiating the library:
+
+```python
+############ FLASK ##############
+def init_app(app):
+    """Flask app initialisation and bootstrap"""
+    app.ts_auth = init_ts_auth(
+        app,
+        SQLAlchemySessionAuthStore(
+          db.session, Role, Permission, RolePermissionAssociation
+        ),
+        auditing=True
+    )
+############ FALCON #############
+auth_middleware = TsAuthMiddleware(
+  os.environ['TS_AUTH_JWKS'],
+  SQLAlchemySessionAuthStore(
+        db.session, models.Role, models.Permission, models.RolePermissionAssociation
+  ),
+  auditing=True
+)  
+```
+
+
 ### Roles and Permissions
 
 Each service owns it's permissions so the first thing that must be done to
