@@ -89,6 +89,7 @@ node('aam-identity-prodcd') {
                       "GITHUB_TOKEN=${env.GITHUB_TOKEN}",
                   ]) {
                     // create distribution
+                    sh 'sudo chmod -R 777 thunderstorm_auth_lib.egg-info/'
                     sh "make dist"
                     sh """
                         git remote set-url origin git@github.com:artsalliancemedia/${repo}.git
