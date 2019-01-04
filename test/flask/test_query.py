@@ -26,7 +26,7 @@ def test_query_filter_for_user(fixtures, db_session):
     ]
     db_session.add_all(complex_associations)
 
-    user = User(username='test', roles=[], groups=[group_uuid])
+    user = User(username='test', roles=[], groups=[group_uuid], organization=None)
 
     query = db_session.query(Complex)
     filtered_query = filter_for_user(query, user, ComplexGroupComplexAssociation, Complex.uuid)
@@ -36,7 +36,7 @@ def test_query_filter_for_user(fixtures, db_session):
 
 
 def test_query_filter_for_user_raises_insufficient_permissions_if_no_groups(fixtures, db_session):
-    user = User(username='test', roles=[], groups=[])
+    user = User(username='test', roles=[], groups=[], organization=None)
 
     query = db_session.query(Complex)
 

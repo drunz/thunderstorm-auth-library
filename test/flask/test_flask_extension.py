@@ -1,9 +1,10 @@
-from unittest.mock import patch
+from unittest.mock import patch, ANY
 
 from flask import g, Flask
 import pytest
 
 from thunderstorm_auth import TOKEN_HEADER, DEFAULT_LEEWAY
+from thunderstorm_auth.auditing import AuditSchema
 from thunderstorm_auth.flask.core import init_ts_auth, TsAuthState
 from thunderstorm_auth.flask.decorators import ts_auth_required
 from thunderstorm_auth.exceptions import ThunderstormAuthError
@@ -15,7 +16,7 @@ def test_ts_auth_required_fails_with_non_callable():
         ts_auth_required('my-perm')
 
 
-def test_ts_auth_required_with_permission_no_perm(access_token, flask_app):
+def test_ts_auth_required_with_permission_no_perm(access_token, flask_app, celery):
     headers = {'X-Thunderstorm-Key': access_token}
     response = flask_app.test_client().get('/perm-a', headers=headers)
 
@@ -45,13 +46,13 @@ def test_endpoint_returns_200_with_proper_token(access_token_with_permissions, f
     assert response.status_code == 200
 
 
-def test_user_with_decoded_token_added_to_g(role_uuid, access_token_with_permissions, flask_app):
+def test_user_with_decoded_token_added_to_g(role_uuid, organization_uuid, access_token_with_permissions, flask_app):
     with flask_app.app_context():
         headers = {'X-Thunderstorm-Key': access_token_with_permissions}
         flask_app.test_client().get('/', headers=headers)
 
         assert g.user == User(
-            username='test-user', roles=[str(role_uuid)], groups=[]
+            username='test-user', roles=[str(role_uuid)], groups=[], organization=str(organization_uuid)
         )
 
 
@@ -107,3 +108,99 @@ def test_ts_auth_extension_has_state(datastore, jwk_set):
     assert app.config['TS_AUTH_LEEWAY'] == DEFAULT_LEEWAY
     assert app.config['TS_AUTH_TOKEN_HEADER'] == TOKEN_HEADER
     assert app.config['TS_AUTH_JWKS'] == jwk_set
+    assert app.config['TS_AUTH_AUDIT_MSG_EXP'] == 3600
+
+
+def test_ts_auth_extension_has_auditing(datastore, jwk_set):
+    app = Flask('test')
+
+    with patch('thunderstorm_auth.flask.core.load_jwks_from_file', return_value=jwk_set):
+        init_ts_auth(app, datastore, auditing=True)
+
+    assert isinstance(app.extensions['ts_auth'], TsAuthState)
+    assert app.after_request_funcs[None][0].__name__ == 'after_request_auditing'
+
+
+def test_endpoint_returns_200_with_proper_token_and_auditing(access_token_with_permissions, audit_flask_app, organization_uuid, role_uuid):
+    headers = {'X-Thunderstorm-Key': access_token_with_permissions}
+    with patch('thunderstorm_auth.flask.core.send_ts_task') as mock_send_ts_task:
+        response = audit_flask_app.test_client().get('/', headers=headers)
+
+    assert response.status_code == 200
+    mock_send_ts_task.assert_called_with(
+        'audit.data',
+        ANY,
+        AuditSchema().dump(
+            {
+                'method': 'GET',
+                'action': 'hello_world',
+                'endpoint': '/',
+                'username': 'test-user',
+                'organization_uuid': str(organization_uuid),
+                'roles': [str(role_uuid)],
+                'groups': [],
+                'status': '200 OK'
+            }
+        ).data,
+        expires=3600
+    )
+
+
+def test_endpoint_returns_403_with_access_token_with_permissions_wrong_service_and_auditing(access_token_with_permissions_wrong_service, audit_flask_app, organization_uuid):
+    headers = {'X-Thunderstorm-Key': access_token_with_permissions_wrong_service}
+
+    with patch('thunderstorm_auth.flask.core.send_ts_task') as mock_send_ts_task:
+        response = audit_flask_app.test_client().get('/', headers=headers)
+
+    assert response.status_code == 403
+
+    mock_send_ts_task.assert_called_with(
+        'audit.data',
+        ANY,
+        AuditSchema().dump(
+            {
+                'method': 'GET',
+                'action': 'hello_world',
+                'endpoint': '/',
+                'username': 'test-user',
+                'organization_uuid': str(organization_uuid),
+                'roles': ANY,
+                'groups': [],
+                'status': '403 FORBIDDEN'
+            }
+        ).data,
+        expires=3600
+    )
+
+
+def test_endpoint_returns_401_with_malformed_token_and_auditing(malformed_token, audit_flask_app, organization_uuid):
+    headers = {'X-Thunderstorm-Key': malformed_token}
+
+    with patch('thunderstorm_auth.flask.core.send_ts_task') as mock_send_ts_task:
+        response = audit_flask_app.test_client().get('/', headers=headers)
+
+    assert response.status_code == 401
+
+    assert not mock_send_ts_task.called
+
+
+def test_endpoint_returns_401_with_expired_token_and_auditing(access_token_expired_with_permissions, audit_flask_app, organization_uuid):
+    headers = {'X-Thunderstorm-Key': access_token_expired_with_permissions}
+
+    with patch('thunderstorm_auth.flask.core.send_ts_task') as mock_send_ts_task:
+        response = audit_flask_app.test_client().get('/', headers=headers)
+
+    assert response.status_code == 401
+
+    assert not mock_send_ts_task.called
+
+
+def test_endpoint_returns_401_with_incorrectly_signed_token_and_auditing(token_signed_with_incorrect_key, audit_flask_app, organization_uuid):
+    headers = {'X-Thunderstorm-Key': token_signed_with_incorrect_key}
+
+    with patch('thunderstorm_auth.flask.core.send_ts_task') as mock_send_ts_task:
+        response = audit_flask_app.test_client().get('/', headers=headers)
+
+    assert response.status_code == 401
+
+    assert not mock_send_ts_task.called

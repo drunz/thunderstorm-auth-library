@@ -59,13 +59,18 @@ def jwk_set(jwk, key_id, alternate_jwk, alternate_key_id):
 
 
 @pytest.fixture
+def organization_uuid():
+    return uuid4()
+
+
+@pytest.fixture
 def role_uuid():
     return uuid4()
 
 
 @pytest.fixture
-def access_token_payload(role_uuid):
-    return {'username': 'test-user', 'token_type': 'access', 'groups': [], 'roles': [str(role_uuid)]}
+def access_token_payload(role_uuid, organization_uuid):
+    return {'username': 'test-user', 'token_type': 'access', 'groups': [], 'roles': [str(role_uuid)], 'organization': {'uuid': str(organization_uuid)}}
 
 
 @pytest.fixture
@@ -138,7 +143,7 @@ def token_with_no_headers(private_key):
 
 
 @pytest.fixture
-def flask_app(datastore, jwk_set):
+def flask_app(datastore, jwk_set, celery):
     app = flask.Flask('test_app')
 
     app.config['TS_AUTH_JWKS'] = jwk_set
@@ -147,6 +152,42 @@ def flask_app(datastore, jwk_set):
     # patch load_jwks_from_file
     with patch('thunderstorm_auth.flask.core.load_jwks_from_file', return_value=jwk_set):
         app.ts_auth = init_ts_auth(app, datastore)
+
+    @app.route('/')
+    @ts_auth_required(with_permission='basic')
+    def hello_world():
+        return 'Hello, World!'
+
+    @app.route('/no-params')
+    @ts_auth_required(with_permission='basic')
+    def no_params():
+        return 'no params'
+
+    @app.route('/perm-a')
+    @ts_auth_required(with_permission='perm-a')
+    def with_perm_a():
+        return 'with perm a'
+
+    @app.errorhandler(HTTPError)
+    def handle_invalid_usage(exc):
+        data = {'code': exc.code, 'message': exc.message}
+
+        return flask.jsonify(data), data['code']
+
+    with app.app_context():
+        yield app
+
+
+@pytest.fixture
+def audit_flask_app(datastore, jwk_set, celery):
+    app = flask.Flask('test_app')
+
+    app.config['TS_AUTH_JWKS'] = jwk_set
+    app.config['TS_SERVICE_NAME'] = 'test-service'
+
+    # patch load_jwks_from_file
+    with patch('thunderstorm_auth.flask.core.load_jwks_from_file', return_value=jwk_set):
+        app.ts_auth = init_ts_auth(app, datastore, auditing=True)
 
     @app.route('/')
     @ts_auth_required(with_permission='basic')
@@ -198,6 +239,16 @@ def datastore(db_session):
 @pytest.fixture
 def celery(celery_app, datastore, db_session):
     init_ts_auth_tasks(celery_app, db_session, [models.ComplexGroupComplexAssociation], datastore, False)
+
+    celery_app.conf.broker_transport_options = {
+        'confirm_publish': True,  # optional, not affecting celery hanging when rabbit is unavailable
+        'max_retries': 3,
+        'interval_start': 0,
+        'interval_step': 0.1,
+        'interval_max': 0.2,
+    }
+
+    celery_app.set_current()
 
     return celery_app
 
