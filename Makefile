@@ -3,7 +3,7 @@
 
 CODACY_PROJECT_TOKEN?=fake
 PYTHON_VERSION?=default
-REGISTRY?=docker.io
+REGISTRY?=886366864302.dkr.ecr.eu-west-1.amazonaws.com
 VERSION?=0.0.0
 
 install:
@@ -17,7 +17,7 @@ test: lint
 	pytest \
 	  -vv \
 		--cov thunderstorm_auth \
-		--cov-report xml \
+		--cov-report xml:coverage-${PYTHON_VERSION}.xml \
 		--cov-append \
 		--junit-xml results-${PYTHON_VERSION}.xml \
 		test/
@@ -29,4 +29,4 @@ dist: clean
 	python setup.py sdist
 
 codacy: test
-	python-codacy-coverage -r coverage.xml
+	python-codacy-coverage -r coverage-${PYTHON_VERSION}.xml
