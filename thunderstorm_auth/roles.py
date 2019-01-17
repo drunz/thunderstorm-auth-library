@@ -1,10 +1,15 @@
 from celery import shared_task, group, chain
+import marshmallow  # TODO: @will-norris backwards compat - remove
 from marshmallow import fields, Schema
+from marshmallow.exceptions import ValidationError
 from statsd.defaults.env import statsd
 from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
+
+
+MARSHMALLOW_2 = int(marshmallow.__version__[0]) < 3
 
 
 class PermissionSchema(Schema):
@@ -16,7 +21,7 @@ class PermissionSchema(Schema):
 class RoleSchema(Schema):
     uuid = fields.UUID(required=True, allow_none=False)
     type = fields.String(required=True, allow_none=False)
-    permissions = fields.List(fields.Nested(PermissionSchema), required=True, missing=[])
+    permissions = fields.List(fields.Nested(PermissionSchema), required=True)
 
 
 class RolePermissionAssociationMixin(object):
@@ -121,11 +126,18 @@ def _init_role_tasks(datastore):
         if not payload:
             raise NotImplementedError
 
-        data, errors = RoleSchema().load(payload)
-
-        if errors:
-            # TODO @shipperizer raise a proper exception
-            raise NotImplementedError
+        # TODO @ship[perizer backwards compat - remove
+        if MARSHMALLOW_2:
+            data, errors = RoleSchema().load(payload)
+            if errors:
+                # TODO @shipperizer raise a proper exception
+                raise NotImplementedError
+        else:
+            try:
+                data = RoleSchema().load(payload)
+            except ValidationError:
+                # TODO @shipperizer raise a proper exception
+                raise NotImplementedError
 
         chain(
             create_role_if_not_exists.si(data['uuid'], data['type']),

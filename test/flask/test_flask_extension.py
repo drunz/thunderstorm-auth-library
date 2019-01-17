@@ -4,7 +4,6 @@ from flask import g, Flask
 import pytest
 
 from thunderstorm_auth import TOKEN_HEADER, DEFAULT_LEEWAY
-from thunderstorm_auth.auditing import AuditSchema
 from thunderstorm_auth.flask.core import init_ts_auth, TsAuthState
 from thunderstorm_auth.flask.decorators import ts_auth_required
 from thunderstorm_auth.exceptions import ThunderstormAuthError
@@ -130,18 +129,16 @@ def test_endpoint_returns_200_with_proper_token_and_auditing(access_token_with_p
     mock_send_ts_task.assert_called_with(
         'audit.data',
         ANY,
-        AuditSchema().dump(
-            {
-                'method': 'GET',
-                'action': 'hello_world',
-                'endpoint': '/',
-                'username': 'test-user',
-                'organization_uuid': str(organization_uuid),
-                'roles': [str(role_uuid)],
-                'groups': [],
-                'status': '200 OK'
-            }
-        ).data,
+        {
+            'method': 'GET',
+            'action': 'hello_world',
+            'endpoint': '/',
+            'username': 'test-user',
+            'organization_uuid': str(organization_uuid),
+            'roles': [str(role_uuid)],
+            'groups': [],
+            'status': '200 OK'
+        },
         expires=3600
     )
 
@@ -157,18 +154,16 @@ def test_endpoint_returns_403_with_access_token_with_permissions_wrong_service_a
     mock_send_ts_task.assert_called_with(
         'audit.data',
         ANY,
-        AuditSchema().dump(
-            {
-                'method': 'GET',
-                'action': 'hello_world',
-                'endpoint': '/',
-                'username': 'test-user',
-                'organization_uuid': str(organization_uuid),
-                'roles': ANY,
-                'groups': [],
-                'status': '403 FORBIDDEN'
-            }
-        ).data,
+        {
+            'method': 'GET',
+            'action': 'hello_world',
+            'endpoint': '/',
+            'username': 'test-user',
+            'organization_uuid': str(organization_uuid),
+            'roles': ANY,
+            'groups': [],
+            'status': '403 FORBIDDEN'
+        },
         expires=3600
     )
 
