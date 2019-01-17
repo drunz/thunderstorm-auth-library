@@ -10,7 +10,7 @@ def _read_requirements(requirements_filename):
 
 REQUIREMENTS = _read_requirements('requirements.txt')
 EXTRA_REQS = {'flask': ['flask>=0.12,<2'], 'falcon': ['falcon>=1.3,<1.4']}
-TS_LIB_VERSION = 'v1.3.0'
+TS_LIB_VERSION = 'v1.4.0'
 
 setup(
     name=thunderstorm_auth.__title__,

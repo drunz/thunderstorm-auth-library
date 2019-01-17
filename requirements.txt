@@ -4,7 +4,6 @@ pyjwt>=1.5.2,<2
 python-json-logger==0.1.8,<1
 requests>=2.20.0<3
 sqlalchemy>=1.1,<1.3
-marshmallow>=2.15,<3
-statsd>=3.2.1,<4
+marshmallow>=2.15,<4
 werkzeug<1
-thunderstorm_library>=1.3.0
+thunderstorm_library>=1.4.0
