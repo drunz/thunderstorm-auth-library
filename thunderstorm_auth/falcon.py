@@ -1,7 +1,7 @@
 import json
 import logging
 
-from thunderstorm.messaging import send_ts_task
+from thunderstorm.messaging import send_ts_task, SchemaError
 
 from thunderstorm_auth import TOKEN_HEADER
 from thunderstorm_auth.auditing import AuditSchema
@@ -96,8 +96,12 @@ class TsAuthMiddleware:
                 'groups': user.groups,
                 'status': res.status
             }
-            schema = AuditSchema()
-            send_ts_task('audit.data', schema, schema.dump(message).data, expires=self.audit_msg_exp)
+            try:
+                send_ts_task('audit.data', AuditSchema(), message, expires=self.audit_msg_exp)
+            except SchemaError as ex:
+                logger.error(
+                    'Error sending audit message, please contact the Thunderstorm team if you see this message: {}'.format(ex)
+                )
 
     def func_validate(self, token_data, permission):
         role_uuids = token_data.get('roles')

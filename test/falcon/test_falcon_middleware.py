@@ -1,6 +1,5 @@
 from unittest.mock import patch, ANY
 
-from thunderstorm_auth.auditing import AuditSchema
 from thunderstorm_auth.user import User
 
 
@@ -92,18 +91,16 @@ def test_endpoint_returns_200_with_proper_token_with_auditing(audit_client, acce
     mock_send_ts_task.assert_called_with(
         'audit.data',
         ANY,
-        AuditSchema().dump(
-            {
-                'method': 'GET',
-                'action': 'Resource_GET_/',
-                'endpoint': '/',
-                'username': 'test-user',
-                'organization_uuid': str(organization_uuid),
-                'roles': [str(role_uuid)],
-                'groups': [],
-                'status': '200 OK'
-            }
-        ).data,
+        {
+            'method': 'GET',
+            'action': 'Resource_GET_/',
+            'endpoint': '/',
+            'username': 'test-user',
+            'organization_uuid': str(organization_uuid),
+            'roles': [str(role_uuid)],
+            'groups': [],
+            'status': '200 OK'
+        },
         expires=3600
     )
 
@@ -119,18 +116,16 @@ def test_endpoint_returns_401_with_permission_on_wrong_service_with_auditing(aud
     mock_send_ts_task.assert_called_with(
         'audit.data',
         ANY,
-        AuditSchema().dump(
-            {
-                'method': 'GET',
-                'action': 'Resource_GET_/',
-                'endpoint': '/',
-                'username': 'test-user',
-                'organization_uuid': str(organization_uuid),
-                'roles': ANY,
-                'groups': [],
-                'status': '401 Unauthorized'
-            }
-        ).data,
+        {
+            'method': 'GET',
+            'action': 'Resource_GET_/',
+            'endpoint': '/',
+            'username': 'test-user',
+            'organization_uuid': str(organization_uuid),
+            'roles': ANY,
+            'groups': [],
+            'status': '401 Unauthorized'
+        },
         expires=3600
     )
 

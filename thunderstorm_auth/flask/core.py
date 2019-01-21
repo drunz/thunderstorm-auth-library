@@ -1,5 +1,6 @@
-from flask import request, g
-from thunderstorm.messaging import send_ts_task
+from flask import request, g, current_app
+import logging
+from thunderstorm.messaging import send_ts_task, SchemaError
 
 from thunderstorm_auth import TOKEN_HEADER, DEFAULT_LEEWAY
 from thunderstorm_auth.auditing import AuditSchema
@@ -8,6 +9,8 @@ from thunderstorm_auth.utils import load_jwks_from_file
 from thunderstorm_auth.flask.cli import _permissions, _list_permissions, _update_permissions
 from thunderstorm_auth.flask.utils import _decode_token
 from thunderstorm_auth.user import User
+
+logger = logging.getLogger(__name__)
 
 
 class TsAuthState(object):
@@ -82,8 +85,12 @@ class TsAuth(object):
                         'groups': user.groups,
                         'status': response.status
                     }
-                    schema = AuditSchema()
-                    send_ts_task('audit.data', schema, schema.dump(message).data, expires=app.config['TS_AUTH_AUDIT_MSG_EXP'])
+                    try:
+                        send_ts_task('audit.data', AuditSchema(), message, expires=current_app.config['TS_AUTH_AUDIT_MSG_EXP'])
+                    except SchemaError as ex:
+                        logger.error(
+                            'Error sending audit message, please contact the Thunderstorm team if you see this message: {}'.format(ex)
+                        )
                 finally:
                     return response
 
