@@ -1,7 +1,10 @@
 from abc import ABC
+import logging
 
 from sqlalchemy.exc import DatabaseError
 from werkzeug.contrib.cache import BaseCache, SimpleCache
+
+logger = logging.getLogger(__name__)
 
 
 class AuthStore(ABC):
@@ -231,10 +234,14 @@ class SQLAlchemySessionAuthStore(SQLAlchemySessionStore, AuthStore):
         # check if this works on other types of cache
         if not self.cache.get(str(permission_uuid)):
             # call get_permission_roles to set cache
-            self.get_permission_roles(permission_uuid)
+            db_permission_roles = self.get_permission_roles(permission_uuid)
 
+        roles_with_permission = self.cache.get(str(permission_uuid))
+        if roles_with_permission is None:
+            logger.error('Checking cache for {} roles returned None. Roles in the db are {}'.format(permission_string, [role[0] for role in db_permission_roles))
+            roles_with_permission = set()  # avoid exception below when this is None
         # return True if there is intersection
-        if self.cache.get(str(permission_uuid)) & {str(role_uuid) for role_uuid in role_uuids}:
+        if roles_with_permission & {str(role_uuid) for role_uuid in role_uuids}:
             return True
         return False
 
