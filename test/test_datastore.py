@@ -159,6 +159,30 @@ def test_sqlalchemy_auth_datastore_create_role_permission_association_succeeds(d
     ).one()
 
 
+def test_sqlalchemy_auth_datastore_delete_role_permission_association(datastore, db_session, fixtures):
+    role = fixtures.Role()
+    permission = fixtures.Permission(roles=[role] + [fixtures.Role() for _ in range(10)])
+
+    assert db_session.query(RolePermissionAssociation).get((role.uuid, permission.uuid))
+
+    role_uuid, permission_uuid = datastore.delete_role_permission_association(role.uuid, permission.uuid, commit=True)
+
+    assert (role_uuid, permission_uuid) == (role.uuid, permission.uuid)
+    assert not db_session.query(RolePermissionAssociation).get((role.uuid, permission.uuid))
+
+
+def test_sqlalchemy_auth_datastore_delete_role_permission_association_no_commit(datastore, db_session, fixtures):
+    role = fixtures.Role()
+    permission = fixtures.Permission(roles=[role] + [fixtures.Role() for _ in range(10)])
+
+    assert db_session.query(RolePermissionAssociation).get((role.uuid, permission.uuid))
+
+    role_uuid, permission_uuid = datastore.delete_role_permission_association(role.uuid, permission.uuid)
+
+    assert (role_uuid, permission_uuid) == (role.uuid, permission.uuid)
+    assert db_session.query(RolePermissionAssociation).get((role.uuid, permission.uuid))
+
+
 def test_sqlalchemy_auth_datastore_create_role_permission_association_does_not_fail_if_previously_created(
         datastore, db_session, fixtures
 ):

@@ -6,4 +6,5 @@ requests>=2.20.0<3
 sqlalchemy>=1.1,<1.3
 marshmallow>=2.15,<4
 werkzeug<1
+thunderstorm_library @ git+https://github.com/artsalliancemedia/thunderstorm-library@v1.4.0#egg=thunderstorm_library-1.4.0
 thunderstorm_library>=1.4.0

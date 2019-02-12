@@ -116,6 +116,28 @@ def _init_role_tasks(datastore):
         """
         return group([create_role_permission_association_if_not_exists.si(role_uuid, permission['uuid']) for permission in permissions])()
 
+
+    @shared_task
+    @statsd.timer('tasks.remove_role_orphan_permission_associations.time')
+    def remove_role_orphan_permission_associations(role_uuid, permissions):
+        """
+        Trigger tasks to remove role-permission associations if no more linked to the role
+
+        Args:
+            role_uuid (uuid): primary identifier of a role
+            permissions (dict): dictionary of permission objects
+        """
+        permission_uuids = {str(permission['uuid']) for permission in permissions}
+
+        role_permission_uuids = {str(p.uuid) for p in datastore.get_role_permissions(role_uuid)}
+
+        orphan_uuids = role_permission_uuids - permission_uuids
+
+        return [
+            datastore.delete_role_permission_association(role_uuid, orphan_uuid, commit=True)
+            for orphan_uuid in orphan_uuids
+        ]
+
     # TODO @shipperizer restructure tasks.py and put this into it
     # TODO @shipperizer make this a ts_task from thunderstorm-messagging
     @shared_task(name='handle_role_data')
@@ -141,10 +163,11 @@ def _init_role_tasks(datastore):
 
         chain(
             create_role_if_not_exists.si(data['uuid'], data['type']),
+            remove_role_orphan_permission_associations.si(data['uuid'], data['permissions']),
             create_role_permission_associations_if_not_exist.si(data['uuid'], data['permissions'])
         )()
 
-    return [handle_role_data, create_role_if_not_exists, create_role_permission_associations_if_not_exist, create_role_permission_association_if_not_exists]
+    return [handle_role_data, create_role_if_not_exists, remove_role_orphan_permission_associations, create_role_permission_associations_if_not_exist, create_role_permission_association_if_not_exists]
 
 
 def _role_task_routing_key():
