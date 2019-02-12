@@ -312,3 +312,23 @@ class SQLAlchemySessionAuthStore(SQLAlchemySessionStore, AuthStore):
             self.commit()
 
         return (role_uuid, permission_uuid)
+
+    def delete_role_permission_association(self, role_uuid, permission_uuid, commit=False, **kwargs):
+        """
+        Args:
+            role_uuid (uuid): primary identifier of a role
+            permission_uuid (uuid): primary identifier of a permission
+            commit (bool): commit or not the db session
+
+        Returns:
+            (role_uuid, permission_uuid) (tuple): identifier of the role-permission association created
+        """
+
+        association = self.db_session.query(self.association_model).get((role_uuid, permission_uuid))
+
+        self.db_session.delete(association)
+
+        if commit:
+            self.commit()
+
+        return (role_uuid, permission_uuid)

@@ -77,3 +77,33 @@ def test_create_role_permission_association_if_not_exists_task_raises_if_no_role
         create_role_permission_association_if_not_exists(uuid4(), permission.uuid)
 
     assert not db_session.query(RolePermissionAssociation).count()
+
+
+def test_remove_role_orphan_permission_associations_none_permissions(db_session, celery, fixtures):
+    remove_role_orphan_permission_associations = celery.tasks['thunderstorm_auth.roles.remove_role_orphan_permission_associations']
+    role = fixtures.Role()
+    permission = fixtures.Permission(roles=[role])
+
+    assert db_session.query(RolePermissionAssociation).count() == 1
+
+    remove_role_orphan_permission_associations(role.uuid, [])
+
+    assert not db_session.query(RolePermissionAssociation).get((role.uuid, permission.uuid))
+    assert not db_session.query(RolePermissionAssociation).count()
+
+
+def test_remove_role_orphan_permission_associations_removes_stale_permissions(db_session, celery, fixtures):
+    remove_role_orphan_permission_associations = celery.tasks['thunderstorm_auth.roles.remove_role_orphan_permission_associations']
+    role = fixtures.Role()
+    permissions = [fixtures.Permission(roles=[role]) for i in range(10)]
+
+    assert db_session.query(RolePermissionAssociation).count() == 10
+    remove_role_orphan_permission_associations(role.uuid, [{'uuid': str(p.uuid)} for p in permissions[:5]])
+
+    assert db_session.query(RolePermissionAssociation).count() == 5
+    assert db_session.query(RolePermissionAssociation).get((role.uuid, permissions[0].uuid))
+    assert not db_session.query(RolePermissionAssociation).get((role.uuid, permissions[5].uuid))
+    assert not db_session.query(RolePermissionAssociation).get((role.uuid, permissions[6].uuid))
+    assert not db_session.query(RolePermissionAssociation).get((role.uuid, permissions[7].uuid))
+    assert not db_session.query(RolePermissionAssociation).get((role.uuid, permissions[8].uuid))
+    assert not db_session.query(RolePermissionAssociation).get((role.uuid, permissions[9].uuid))
