@@ -10,7 +10,7 @@ VERSION?=0.0.0
 
 install:
 	@echo "# --pre allows pre releases"
-	pip install --process-dependency-links --pre -e .
+	pip install -f --pre -e .
 	pip install -r requirements-dev.txt
 
 compat:
