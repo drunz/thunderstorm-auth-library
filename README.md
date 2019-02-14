@@ -47,6 +47,7 @@ e.g. for Flask:
 The reason for this is due to the scheduling of roles broadcasting which happens once every *60minutes*, so if you upgrade straight to `v0.6` there is a chance that your application will not function correctly for up to *one hour* (no roles would have been received and each api call would result in a `401 UNAUTHORIZED`). `v.0.5` is backwards compatible (by which we mean it can still use permissions in the token) which is why we recommend upgrading to that first for one hour so that when you move to `v.0.6` the roles will have been cached locally at that point.
   no roles would have been received and each api call would result in a `401 UNAUTHORIZED`, therefore *1h of missing data and not functioning services*
 
+* on version `v0.7.2` index on `complex_uuid` (one each) has been added to improve lookup perfomances, you are advised to generate a migration to take advantage of these. **Pay attention to the fact that this could have some impact on new deployments if the db migration takes too long due to index creation**
 
 # ################################################################################################ #
 
