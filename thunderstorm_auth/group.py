@@ -65,9 +65,12 @@ def create_group_association_model(group_type, base):
         SQLALchemy model of TS auth group association defined by `group_type`.
     """
     return type(
-        group_type.model_name, (base, ), {
-            '__ts_group_type__': group_type, '__tablename__': group_type.table_name, 'group_uuid':
-            Column(UUID(as_uuid=True),
-                   primary_key=True), group_type.member_column_name: Column(UUID(as_uuid=True), primary_key=True)
+        group_type.model_name,
+        (base, ),
+        {
+            '__ts_group_type__': group_type,
+            '__tablename__': group_type.table_name,
+            'group_uuid': Column(UUID(as_uuid=True), primary_key=True),
+            group_type.member_column_name: Column(UUID(as_uuid=True), primary_key=True, index=True)
         }
     )
