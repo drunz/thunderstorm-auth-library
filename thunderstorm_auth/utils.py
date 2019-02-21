@@ -23,7 +23,9 @@ def generate_private_key():
 
 
 def generate_jwk(private_key):
-    return json.loads(RSAAlgorithm.to_jwk(private_key.public_key()))
+    jwk = json.loads(RSAAlgorithm.to_jwk(private_key.public_key()))
+    jwk['kid'] = generate_key_id(jwk)
+    return jwk
 
 
 def generate_key_id(jwk):

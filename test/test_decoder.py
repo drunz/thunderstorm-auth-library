@@ -41,9 +41,9 @@ def test_decode_token_raises_missing_key_error_if_invalid_key_id_specified_in_jw
         decode_token(access_token, {})
 
 
-def test_get_headers_from_token_returns_key_id_and_signing_algorithm(access_token, key_id):
+def test_get_headers_from_token_returns_key_id_and_signing_algorithm(access_token, jwk):
     kid, alg = get_kid_and_alg_headers_from_token(access_token)
-    assert kid == key_id
+    assert kid == jwk['kid']
     assert alg == 'RS512'
 
 
