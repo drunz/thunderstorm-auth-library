@@ -34,11 +34,6 @@ def jwk(private_key):
 
 
 @pytest.fixture
-def key_id(jwk):
-    return utils.generate_key_id(jwk)
-
-
-@pytest.fixture
 def alternate_private_key():
     return utils.generate_private_key()
 
@@ -49,13 +44,8 @@ def alternate_jwk(alternate_private_key):
 
 
 @pytest.fixture
-def alternate_key_id(alternate_jwk):
-    return utils.generate_key_id(alternate_jwk)
-
-
-@pytest.fixture
-def jwk_set(jwk, key_id, alternate_jwk, alternate_key_id):
-    return {'keys': {key_id: jwk, alternate_key_id: alternate_jwk}}
+def jwk_set(jwk, alternate_jwk):
+    return {'keys': [jwk, alternate_jwk]}
 
 
 @pytest.fixture
@@ -82,13 +72,13 @@ def refresh_token_payload():
 
 
 @pytest.fixture
-def make_token(private_key, key_id):
+def make_token(private_key, jwk):
     """Returns a partial object for creating a token.
         Callers can then specify their desired payload or lifetime when
         calling the returned object. If no lifetime is specified it defaults
         to 15 minutes.
     """
-    return functools.partial(utils.encode_token, private_key, key_id)
+    return functools.partial(utils.encode_token, private_key, jwk['kid'])
 
 
 @pytest.fixture
@@ -119,13 +109,13 @@ def refresh_token(make_token, refresh_token_payload):
 
 
 @pytest.fixture
-def token_signed_with_incorrect_key(key_id, access_token_payload, alternate_private_key):
+def token_signed_with_incorrect_key(jwk, access_token_payload, alternate_private_key):
     """ Return a token signed with a key that does not match the KID specified
     """
     return utils.encode_token(
         # token should have been signed with private_key
         alternate_private_key,
-        key_id,
+        jwk['kid'],
         access_token_payload
     )
 

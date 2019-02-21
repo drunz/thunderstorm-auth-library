@@ -29,7 +29,7 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY, options=None):
     try:
         key_id, algorithm = get_kid_and_alg_headers_from_token(token)
 
-        public_key = get_public_key_from_jwk(jwks['keys'][key_id])
+        public_key = get_public_key_from_jwk(jwks['keys'], key_id)
 
         return jwt.decode(token, key=public_key, leeway=leeway, algorithms=[algorithm], options=options)
 
@@ -43,17 +43,30 @@ def decode_token(token, jwks, leeway=DEFAULT_LEEWAY, options=None):
         raise MissingKeyErrror('The key_id specified in your token is not present in the JWK set provided.')
 
 
-def get_public_key_from_jwk(jwk):
+def get_public_key_from_jwk(keys, key_id):
     """
     Create an _RSAPublicKey object using the contents of a JWK
 
     Args:
-        JWK (dict): Contains information which represents a public key
+        keys (dict or list): Contains information which represents multiple public keys
+        key_id (str): Unique identifier for the JWK you want to retrieve
 
     Returns:
         _RSAPublicKey
     """
+    if isinstance(keys, dict):  # @will-norris: Invalid format - deprecate
+        jwk = keys[key_id]
+    else:
+        jwk = None
+        for key in keys:
+            if key_id == key['kid']:
+                jwk = key
+                break
+        if jwk is None:
+            raise KeyError()
+
     jwk_str = json.dumps(jwk)
+
     return jwt.algorithms.RSAAlgorithm.from_jwk(jwk_str)
 
 
