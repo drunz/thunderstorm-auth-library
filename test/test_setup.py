@@ -34,7 +34,8 @@ def test_exchange_name():
     assert setup.EXCHANGE.name == 'ts.messaging'
 
 
-def test_init_group_sync_tasks(celery_app, models, group_types):
+@mock.patch('thunderstorm_auth.setup._request_complex_group_republish')
+def test_init_group_sync_tasks(mock_republish, celery_app, models, group_types):
     # arrange
     foo_type, bar_type = group_types
     db_session = mock.Mock()
@@ -45,6 +46,7 @@ def test_init_group_sync_tasks(celery_app, models, group_types):
     # assert
     assert foo_type.task_name in celery_app.tasks
     assert bar_type.task_name in celery_app.tasks
+    mock_republish.assert_called_once_with(celery_app, db_session, models)
 
 
 def test_init_group_sync_queue(celery_app, models, group_types):
