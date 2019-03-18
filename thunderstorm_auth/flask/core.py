@@ -3,7 +3,7 @@ import logging
 from thunderstorm.messaging import send_ts_task, SchemaError
 
 from thunderstorm_auth import TOKEN_HEADER, DEFAULT_LEEWAY
-from thunderstorm_auth.auditing import AuditSchema
+from thunderstorm_auth.auditing import AuditSchema, AuditConf
 from thunderstorm_auth.exceptions import TokenError
 from thunderstorm_auth.utils import load_jwks_from_file
 from thunderstorm_auth.flask.cli import _permissions, _list_permissions, _update_permissions
@@ -28,13 +28,13 @@ class TsAuth(object):
     Thunderstorm Authorization extension for flask
     """
 
-    def __init__(self, app=None, datastore=None, jwks_path='config/jwks.json', auditing=False, **kwargs):
+    def __init__(self, app=None, datastore=None, jwks_path='config/jwks.json', auditing=None, **kwargs):
         """
         Args:
             app (Flask app object): flask application we want to use the ts auth on
             datastore (AuthDatastore object): datastore used for the auth data retrieval
             jwks_path (str): relative path to the private keys
-            auditing (bool): Defines whether or not auditing is enabled for API calls
+            auditing (bool or AuditConf): Defines whether or not auditing is enabled for API calls
         """
         if all([app, datastore, jwks_path]):
             self.init_app(app, datastore, jwks_path, auditing=auditing, **kwargs)
@@ -55,21 +55,25 @@ class TsAuth(object):
         """
         return TsAuthState(self.app, self.datastore)
 
-    def init_app(self, app, datastore, jwks_path, auditing=False):
+    def init_app(self, app, datastore, jwks_path, auditing=None):
         """
         Initialize the extension
         """
         self._set_default_config(app, jwks_path)
         self.app = app
         self.datastore = datastore
+        self.auditing = auditing if isinstance(auditing, AuditConf) else AuditConf(auditing)
 
         group = app.cli.group(name='permissions')(_permissions())
         group.command(name='list')(_list_permissions(datastore.db_session, datastore.permission_model))
         group.command(name='update')(_update_permissions(app, datastore.db_session, datastore.permission_model))
 
-        if auditing:
+        if self.auditing.enabled:
             @app.after_request
             def after_request_auditing(response):
+                if request.path in self.auditing.exclude_paths:
+                    return response
+
                 try:
                     user = g.user if hasattr(g, 'user') else User.from_decoded_token(_decode_token())
                 except TokenError as exc:
@@ -95,9 +99,6 @@ class TsAuth(object):
                     return response
 
         app.extensions['ts_auth'] = self.state
-
-
-
 
 
 def init_ts_auth(app=None, datastore=None, jwks_path='config/jwks.json', auditing=False, **kwargs):

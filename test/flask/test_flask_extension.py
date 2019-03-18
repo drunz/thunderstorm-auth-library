@@ -4,6 +4,7 @@ from flask import g, Flask
 import pytest
 
 from thunderstorm_auth import TOKEN_HEADER, DEFAULT_LEEWAY
+from thunderstorm_auth.auditing import AuditConf
 from thunderstorm_auth.flask.core import init_ts_auth, TsAuthState
 from thunderstorm_auth.flask.decorators import ts_auth_required
 from thunderstorm_auth.exceptions import ThunderstormAuthError
@@ -118,6 +119,18 @@ def test_ts_auth_extension_has_auditing(datastore, jwk_set):
 
     assert isinstance(app.extensions['ts_auth'], TsAuthState)
     assert app.after_request_funcs[None][0].__name__ == 'after_request_auditing'
+
+
+def test_ts_auth_extension_has_auditing_with_passed_configuration(datastore, jwk_set):
+    app = Flask('test')
+    auditing = AuditConf(True, ['/status'])
+
+    with patch('thunderstorm_auth.flask.core.load_jwks_from_file', return_value=jwk_set):
+        ts_auth = init_ts_auth(app, datastore, auditing=auditing)
+
+    assert app.after_request_funcs[None][0].__name__ == 'after_request_auditing'
+    assert ts_auth.auditing.enabled == True
+    assert ts_auth.auditing.exclude_paths == ['/status']
 
 
 def test_endpoint_returns_200_with_proper_token_and_auditing(access_token_with_permissions, audit_flask_app, organization_uuid, role_uuid):
