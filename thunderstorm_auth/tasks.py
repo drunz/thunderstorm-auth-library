@@ -3,12 +3,18 @@ import logging
 import celery
 from celery.execute import send_task
 from celery.utils.log import get_task_logger
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import DBAPIError, SQLAlchemyError
+
+
+PERMISSIONS_NEW = 'permissions.new'
+PERMISSIONS_DELETE = 'permissions.delete'
+MESSAGING_EXCHANGE = 'ts.messaging'
 
 logger = get_task_logger(__name__)
 logger.setLevel(logging.INFO)
 
 
+# TODO @shipperizer move all of the db ops into the datastore module
 def group_sync_task(model, db_session):
     """Create a sync task for a group model.
 
@@ -30,7 +36,7 @@ def group_sync_task(model, db_session):
     """
     task_name = model.__ts_group_type__.task_name
 
-    @celery.task(name=task_name, autoretry=(SQLAlchemyError, ))
+    @celery.task(name=task_name, autoretry=(SQLAlchemyError, DBAPIError))
     def sync_group_data(group_uuid, members):
         """Synchronizes group membership data.
 
@@ -47,13 +53,14 @@ def group_sync_task(model, db_session):
         removed = current_members - latest_members
         added = latest_members - current_members
 
-        if removed:
-            delete_group_associations(db_session, model, group_uuid, removed)
-        if added:
-            add_group_associations(db_session, model, group_uuid, added)
         try:
+            if removed:
+                delete_group_associations(db_session, model, group_uuid, removed)
+            if added:
+                add_group_associations(db_session, model, group_uuid, added)
+
             db_session.commit()
-        except SQLAlchemyError:
+        except (DBAPIError, SQLAlchemyError) as exc:
             db_session.rollback()
             raise
 
@@ -112,11 +119,6 @@ def add_group_associations(db_session, model, group_uuid, added):
     )
 
 
-PERMISSIONS_NEW = 'permissions.new'
-PERMISSIONS_DELETE = 'permissions.delete'
-MESSAGING_EXCHANGE = 'ts.messaging'
-
-
 def permission_sync_task(Permission, db_session):
     @celery.task(name='ts_auth.permissions.sync')
     def sync_permissions():
@@ -141,6 +143,11 @@ def permission_sync_task(Permission, db_session):
                 )
             permission.is_sent = True
             db_session.add(permission)
-            db_session.commit()
+
+            try:
+                db_session.commit()
+            except (DBAPIError, SQLAlchemyError) as exc:
+                logging.critical('Commit session went wrong, {}, rolling back'.format(exc))
+                db_session.rollback()
 
     return sync_permissions
