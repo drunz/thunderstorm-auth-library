@@ -41,6 +41,7 @@ def init_group_sync_tasks(celery_app, db_session, group_models, ensure_exchange_
     """
     _register_task_queue(celery_app, group_models, ensure_exchange_exists)
     _register_sync_tasks(celery_app, db_session, group_models)
+    _request_complex_group_republish(celery_app, db_session, group_models)
 
 
 def _register_task_queue(celery_app, group_models, ensure_exchange_exists):
@@ -90,6 +91,14 @@ def _register_sync_tasks(celery_app, db_session, group_models):
     for group_model in group_models:
         sync_task = group_sync_task(group_model, db_session)
         celery_app.register_task(sync_task)
+
+
+def _request_complex_group_republish(celery_app, db_session, group_models):
+    # send a request of sync if any of `group_models` table in the db is empty
+    if not all([db_session.query(group_model).first() for group_model in group_models]):
+        celery_app.send_task(
+            'complex-group.republish', ({},), exchange='ts.messaging', routing_key='complex-group.republish'
+        )
 
 
 def _routing_keys(group_models):
