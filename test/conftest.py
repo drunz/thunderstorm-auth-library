@@ -215,7 +215,8 @@ def role_setup(fixtures, role_uuid):
 @pytest.fixture
 def role_tasks(db_session):
     datastore = SQLAlchemySessionAuthStore(
-        db_session, models.Role, models.Permission, models.RolePermissionAssociation
+        db_session, models.Role, models.Permission, models.RolePermissionAssociation,
+        models.ComplexGroupComplexAssociation
     )
     # initialize only once the tasks, return a mapping task name: task
     return {t.name: t for t in _init_role_tasks(datastore)}
@@ -223,7 +224,10 @@ def role_tasks(db_session):
 
 @pytest.fixture(scope='function')
 def datastore(db_session):
-    return SQLAlchemySessionAuthStore(db_session, models.Role, models.Permission, models.RolePermissionAssociation)
+    return SQLAlchemySessionAuthStore(
+        db_session, models.Role, models.Permission, models.RolePermissionAssociation,
+        models.ComplexGroupComplexAssociation
+    )
 
 
 @pytest.fixture

@@ -1,6 +1,6 @@
 from abc import ABC
 
-from sqlalchemy.exc import DatabaseError
+from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 from werkzeug.contrib.cache import BaseCache, SimpleCache
 
 
@@ -11,16 +11,18 @@ class AuthStore(ABC):
 
     # TODO @shipperizer implement also permission creation
 
-    def __init__(self, role_model, permission_model, association_model):
+    def __init__(self, role_model, permission_model, association_model, group_association_model):
         """
         Args:
             role_model (object): A role model class definition
             permission_model (object): A permission model class definition
-            association_model (object): A association role-permission model class definition
+            association_model (object): An association role-permission model class definition
+            group_association_model (object): A group model class definition (eg complex-group)
         """
         self.role_model = role_model
         self.permission_model = permission_model
         self.association_model = association_model
+        self.group_association_model = group_association_model
 
     def create_role(self, role_uuid, role_type, **kwargs):
         """
@@ -96,6 +98,24 @@ class AuthStore(ABC):
         """
         raise NotImplementedError
 
+    def group_associations_exist(self):
+        raise NotImplementedError
+
+    def get_group_associations_(self, group_uuids):
+        """
+        Args:
+            group_uuids (list of objects): primary identifiers of group
+        """
+        raise NotImplementedError
+
+    def create_group_association(self, group_uuid, complex_uuid):
+        """
+        Args:
+            group_uuid (object): primary identifier of a group
+            complex_uuid (object): primary identifier of a complex
+        """
+        raise NotImplementedError
+
 
 class SQLAlchemySessionStore(object):
     """
@@ -115,7 +135,7 @@ class SQLAlchemySessionStore(object):
         """
         try:
             self.db_session.commit()
-        except DatabaseError:
+        except (DBAPIError, SQLAlchemyError):
             self.db_session.rollback()
             raise
 
@@ -125,18 +145,19 @@ class SQLAlchemySessionAuthStore(SQLAlchemySessionStore, AuthStore):
     SQLAlchemy auth store implementation
     """
 
-    def __init__(self, db_session, role_model, permission_model, association_model, bootstrap=False, cache=None):
+    def __init__(self, db_session, role_model, permission_model, association_model, group_association_model, bootstrap=False, cache=None):
         """
         Args:
             db_session (sqlalchemy session): database session
             role_model (sqlalchemy model): a role model class definition
             association_model (sqlalchemy model): a role-permission association model class definition
             permission_model (sqlalchemy model): a permission model class definition
+            group_association_model (sqlalchemy model): A group model class definition (eg complex-group)
             bootstrap (bool): defines if the class should preload the permissions and roles into the cache
             cache (werkzeug.contrib.cache.BaseCache): cache object, defaults to SimpleCache is None
         """
         SQLAlchemySessionStore.__init__(self, db_session)
-        AuthStore.__init__(self, role_model, permission_model, association_model)
+        AuthStore.__init__(self, role_model, permission_model, association_model, group_association_model)
 
         # default in-memory cache with 7.5mins timeout and max 500 elements cached
         if cache and not isinstance(cache, BaseCache):
@@ -332,3 +353,41 @@ class SQLAlchemySessionAuthStore(SQLAlchemySessionStore, AuthStore):
             self.commit()
 
         return (role_uuid, permission_uuid)
+
+    def group_associations_exist(self):
+        """
+        Checks if there is any group instance in the group table
+
+        Returns:
+            bool: True if at least one group is present, False otherwise
+        """
+        return True if self.db_session.query(self.group_association_model).first() else False
+
+    def get_group_associations(self, group_uuids):
+        """
+        Args:
+            group_uuids (list of uuids): primary identifiers of groups
+
+        Returns:
+            query (sqlalchemy query object): query with all the group associations with those group uuids
+        """
+        if len(group_uuids) == 1:
+            return self.db_session.query(self.group_association_model).filter(self.group_association_model.group_uuid == group_uuids[0])
+        return self.db_session.query(self.group_association_model).filter(self.group_association_model.group_uuid.in_(group_uuids))
+
+    def create_group_association(self, group_uuid, complex_uuid, commit=False, **kwargs):
+        """
+        Args:
+            group_uuid (uuid): primary identifier of a group
+            complex_uuid (uuid): primary identifier of a complex
+            commit (bool): commit or not the db session
+
+        Returns:
+            (group_uuid, complex_uuid) (tuple): identifier of the group association created
+        """
+        self.db_session.add(self.group_association_model(group_uuid=group_uuid, complex_uuid=complex_uuid))
+
+        if commit:
+            self.commit()
+
+        return (group_uuid, complex_uuid)

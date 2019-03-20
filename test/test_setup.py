@@ -9,35 +9,33 @@ from thunderstorm_auth import group, setup
 
 
 @pytest.fixture
-def group_types():
-    return [group.GroupType('foo'), group.GroupType('bar')]
+def group_type():
+    return group.GroupType('foo')
 
 
 @pytest.fixture
-def models(group_types):
+def models(group_type):
     base = declarative_base()
-    foo_type, bar_type = group_types
-    return [group.create_group_association_model(foo_type, base), group.create_group_association_model(bar_type, base)]
+    foo_type = group_type
+    return [group.create_group_association_model(foo_type, base)]
 
 
 @pytest.fixture
-def celery_app(group_types):
-    foo_type, bar_type = group_types
+def celery_app(group_type):
+    foo_type = group_type
     app = celery.Celery('example_service')
     app.broker_connection = mock.Mock()
     yield app
     app.tasks.unregister(foo_type.task_name)
-    app.tasks.unregister(bar_type.task_name)
 
 
 def test_exchange_name():
     assert setup.EXCHANGE.name == 'ts.messaging'
 
 
-@mock.patch('thunderstorm_auth.setup._request_complex_group_republish')
-def test_init_group_sync_tasks(mock_republish, celery_app, models, group_types):
+def test_init_group_sync_tasks(celery_app, models, group_type):
     # arrange
-    foo_type, bar_type = group_types
+    foo_type = group_type
     db_session = mock.Mock()
 
     # act
@@ -45,13 +43,11 @@ def test_init_group_sync_tasks(mock_republish, celery_app, models, group_types):
 
     # assert
     assert foo_type.task_name in celery_app.tasks
-    assert bar_type.task_name in celery_app.tasks
-    mock_republish.assert_called_once_with(celery_app, db_session, models)
 
 
-def test_init_group_sync_queue(celery_app, models, group_types):
+def test_init_group_sync_queue(celery_app, models, group_type):
     # arrange
-    foo_type, bar_type = group_types
+    foo_type = group_type
     db_session = mock.Mock()
 
     # act
@@ -65,5 +61,5 @@ def test_init_group_sync_queue(celery_app, models, group_types):
         (binding.exchange, binding.routing_key)
         for binding in queue.bindings
     } == {
-        (setup.EXCHANGE, 'role.data'), (setup.EXCHANGE, foo_type.routing_key), (setup.EXCHANGE, bar_type.routing_key)
+        (setup.EXCHANGE, 'role.data'), (setup.EXCHANGE, foo_type.routing_key)
     }
