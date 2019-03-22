@@ -1,4 +1,5 @@
 from datetime import datetime
+from random import choice
 from os import environ
 from uuid import uuid4
 
@@ -8,11 +9,11 @@ from sqlalchemy.orm.query import Query
 from werkzeug.contrib.cache import BaseCache, SimpleCache, RedisCache, MemcachedCache
 
 from thunderstorm_auth.datastore import SQLAlchemySessionAuthStore
-from test.models import Role, Permission, RolePermissionAssociation
+from test.models import Role, Permission, RolePermissionAssociation, ComplexGroupComplexAssociation
 
 
 def test_sqlalchemy_auth_datastore_initialization(db_session):
-    datastore = SQLAlchemySessionAuthStore(db_session, Role, Permission, RolePermissionAssociation)
+    datastore = SQLAlchemySessionAuthStore(db_session, Role, Permission, RolePermissionAssociation, ComplexGroupComplexAssociation)
 
     assert datastore.db_session == db_session
     assert datastore.role_model == Role
@@ -26,12 +27,16 @@ def test_sqlalchemy_auth_datastore_initialization_with_wrong_cache(db_session):
         pass
 
     with pytest.raises(NotImplementedError):
-        SQLAlchemySessionAuthStore(db_session, Role, Permission, RolePermissionAssociation, cache=FakeCache())
+        SQLAlchemySessionAuthStore(
+            db_session, Role, Permission, RolePermissionAssociation, ComplexGroupComplexAssociation, cache=FakeCache()
+        )
 
 
 @pytest.mark.parametrize('cache', [RedisCache(), MemcachedCache()])
 def test_sqlalchemy_auth_datastore_initialization_with_basecache(cache, db_session):
-    datastore = SQLAlchemySessionAuthStore(db_session, Role, Permission, RolePermissionAssociation, cache=cache)
+    datastore = SQLAlchemySessionAuthStore(
+        db_session, Role, Permission, RolePermissionAssociation, ComplexGroupComplexAssociation, cache=cache
+    )
 
     assert datastore.db_session == db_session
     assert datastore.role_model == Role
@@ -288,3 +293,39 @@ def test_sqlalchemy_auth_datastore_is_permission_in_roles_faster_using_memcached
     print('MemcachedCache class - without cache: {} -- with cache: {}'.format(no_cache, cache))
 
     assert cache < no_cache
+
+
+@pytest.mark.parametrize('no_associations, result', [(0, False), (10, True)])
+def test_sqlalchemy_auth_datastore_group_associations_exist(no_associations, result, datastore, fixtures):
+    [fixtures.ComplexGroupComplexAssociation(group_uuid=uuid4(), complex_uuid=uuid4()) for _ in range(no_associations)]
+
+    assert datastore.group_associations_exist() == result
+
+
+def test_sqlalchemy_auth_datastore_get_group_associations(datastore, fixtures):
+    group_uuid = uuid4()
+    group_associations = [fixtures.ComplexGroupComplexAssociation(group_uuid=group_uuid, complex_uuid=uuid4()) for _ in range(150)]
+
+    query = datastore.get_group_associations([group_uuid])
+
+    assert isinstance(query, Query)
+    assert query.count() == 150
+    assert query.all() == group_associations
+
+
+def test_sqlalchemy_auth_datastore_get_group_associations_with_2_group_uuids(datastore, fixtures):
+    group_uuids = [uuid4(), uuid4()]
+    group_associations = [fixtures.ComplexGroupComplexAssociation(group_uuid=choice(group_uuids), complex_uuid=uuid4()) for _ in range(150)]
+    [fixtures.ComplexGroupComplexAssociation(group_uuid=uuid4(), complex_uuid=uuid4()) for _ in range(150)]
+    query = datastore.get_group_associations(group_uuids)
+
+    assert isinstance(query, Query)
+    assert query.count() == 150
+    assert query.all() == group_associations
+
+
+def test_sqlalchemy_auth_datastore_create_group_association(datastore, fixtures):
+    group_uuid, complex_uuid = uuid4(), uuid4()
+
+    assert datastore.create_group_association(group_uuid, complex_uuid) == (group_uuid, complex_uuid)
+    assert datastore.get_group_associations([group_uuid]).count() == 1

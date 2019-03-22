@@ -1,7 +1,8 @@
 import itertools
 
+from celery import current_app, signals, shared_task
 import kombu
-from celery import signals
+from statsd.defaults.env import statsd
 
 from thunderstorm_auth.tasks import group_sync_task, permission_sync_task
 from thunderstorm_auth.roles import _init_role_tasks, _role_task_routing_key
@@ -21,6 +22,7 @@ def init_ts_auth_tasks(celery_app, db_session, group_models, datastore, ensure_e
         ensure_exchange_exists (bool): Whether to error if exchange does not exist.
     """
     init_group_sync_tasks(celery_app, db_session, group_models, ensure_exchange_exists=ensure_exchange_exists)
+    _init_group_tasks(datastore)
     _init_role_tasks(datastore)
 
 
@@ -41,7 +43,6 @@ def init_group_sync_tasks(celery_app, db_session, group_models, ensure_exchange_
     """
     _register_task_queue(celery_app, group_models, ensure_exchange_exists)
     _register_sync_tasks(celery_app, db_session, group_models)
-    _request_complex_group_republish(celery_app, db_session, group_models)
 
 
 def _register_task_queue(celery_app, group_models, ensure_exchange_exists):
@@ -93,20 +94,44 @@ def _register_sync_tasks(celery_app, db_session, group_models):
         celery_app.register_task(sync_task)
 
 
-def _request_complex_group_republish(celery_app, db_session, group_models):
-    # send a request of sync if any of `group_models` table in the db is empty
-    if not all([db_session.query(group_model).first() for group_model in group_models]):
-        celery_app.send_task(
-            'complex-group.republish', ({},), exchange='ts.messaging', routing_key='complex-group.republish'
-        )
-
-
 def _routing_keys(group_models):
     return [group_model.__ts_group_type__.routing_key for group_model in group_models]
 
 
 def _bindings(exchange, routing_keys):
     return [kombu.binding(exchange, routing_key=routing_key) for routing_key in routing_keys]
+
+
+def _init_group_tasks(datastore):
+    """
+    Create and init shared task for handling groups, no need to register them as they are
+    shared_task
+
+    Creates a task which is not registered with any app. The task should be
+    created and registered to an app using `thunderstorm_auth.setup.init_group_sync_tasks`.
+
+    Args:
+        datastore (AuthDatastore): datastore object from the thunderstorm-auth library
+
+    Returns:
+        list: tasks needed for handling groups
+    """
+
+    @shared_task(name='auth.request_groups_republish')
+    @statsd.timer('tasks.request_group_republish.time')
+    def request_groups_republish():
+        """
+        Request updated groups if none are present in the db
+        """
+        if not datastore.group_associations_exist():
+            current_app.send_task(
+                'complex-group.republish',
+                ({},),
+                exchange='ts.messaging',
+                routing_key='complex-group.republish'
+            )
+
+    return [request_groups_republish]
 
 
 @signals.worker_ready.connect
