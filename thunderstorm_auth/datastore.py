@@ -24,7 +24,7 @@ class AuthStore(ABC):
         self.association_model = association_model
         self.group_association_model = group_association_model
 
-    def create_role(self, role_uuid, role_type, **kwargs):
+    def create_role(self, role_uuid, role_type):
         """
         Args:
             role_uuid (object): primary identifier of a role
@@ -90,7 +90,7 @@ class AuthStore(ABC):
         """
         raise NotImplementedError
 
-    def create_role_permission_association(self, role_uuid, permission_uuid, **kwargs):
+    def create_role_permission_association(self, role_uuid, permission_uuid):
         """
         Args:
             role_uuid (object): primary identifier of a role
@@ -109,6 +109,14 @@ class AuthStore(ABC):
         raise NotImplementedError
 
     def create_group_association(self, group_uuid, complex_uuid):
+        """
+        Args:
+            group_uuid (object): primary identifier of a group
+            complex_uuid (object): primary identifier of a complex
+        """
+        raise NotImplementedError
+
+    def delete_group_association(self, group_uuid, complex_uuid):
         """
         Args:
             group_uuid (object): primary identifier of a group
@@ -298,7 +306,7 @@ class SQLAlchemySessionAuthStore(SQLAlchemySessionStore, AuthStore):
         """
         return self.db_session.query(self.permission_model).filter(self.permission_model.uuid.in_(permission_uuids))
 
-    def create_role(self, role_uuid, role_type, commit=False, **kwargs):
+    def create_role(self, role_uuid, role_type, commit=False):
         """
         Args:
             role_uuid (uuid): primary identifier of a role
@@ -315,7 +323,7 @@ class SQLAlchemySessionAuthStore(SQLAlchemySessionStore, AuthStore):
 
         return role_uuid
 
-    def create_role_permission_association(self, role_uuid, permission_uuid, commit=False, **kwargs):
+    def create_role_permission_association(self, role_uuid, permission_uuid, commit=False):
         """
         Args:
             role_uuid (uuid): primary identifier of a role
@@ -334,7 +342,7 @@ class SQLAlchemySessionAuthStore(SQLAlchemySessionStore, AuthStore):
 
         return (role_uuid, permission_uuid)
 
-    def delete_role_permission_association(self, role_uuid, permission_uuid, commit=False, **kwargs):
+    def delete_role_permission_association(self, role_uuid, permission_uuid, commit=False):
         """
         Args:
             role_uuid (uuid): primary identifier of a role
@@ -347,10 +355,11 @@ class SQLAlchemySessionAuthStore(SQLAlchemySessionStore, AuthStore):
 
         association = self.db_session.query(self.association_model).get((role_uuid, permission_uuid))
 
-        self.db_session.delete(association)
+        if association:
+            self.db_session.delete(association)
 
-        if commit:
-            self.commit()
+            if commit:
+                self.commit()
 
         return (role_uuid, permission_uuid)
 
@@ -375,7 +384,7 @@ class SQLAlchemySessionAuthStore(SQLAlchemySessionStore, AuthStore):
             return self.db_session.query(self.group_association_model).filter(self.group_association_model.group_uuid == group_uuids[0])
         return self.db_session.query(self.group_association_model).filter(self.group_association_model.group_uuid.in_(group_uuids))
 
-    def create_group_association(self, group_uuid, complex_uuid, commit=False, **kwargs):
+    def create_group_association(self, group_uuid, complex_uuid, commit=False):
         """
         Args:
             group_uuid (uuid): primary identifier of a group
@@ -389,5 +398,25 @@ class SQLAlchemySessionAuthStore(SQLAlchemySessionStore, AuthStore):
 
         if commit:
             self.commit()
+
+        return (group_uuid, complex_uuid)
+
+    def delete_group_association(self, group_uuid, complex_uuid, commit=False):
+        """
+        Args:
+            group_uuid (uuid): primary identifier of a group
+            complex_uuid (uuid): primary identifier of a complex
+            commit (bool): commit or not the db session
+
+        Returns:
+            (group_uuid, complex_uuid) (tuple): identifier of the group association created
+        """
+        association = self.db_session.query(self.group_association_model).get((group_uuid, complex_uuid))
+
+        if association:
+            self.db_session.delete(association)
+
+            if commit:
+                self.commit()
 
         return (group_uuid, complex_uuid)

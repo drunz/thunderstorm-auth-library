@@ -16,7 +16,6 @@ from thunderstorm_auth import utils
 from thunderstorm_auth.datastore import SQLAlchemySessionAuthStore
 from thunderstorm_auth.exceptions import HTTPError
 from thunderstorm_auth.flask import ts_auth_required, init_ts_auth
-from thunderstorm_auth.roles import _init_role_tasks
 from thunderstorm_auth.setup import init_ts_auth_tasks
 
 from test import models
@@ -212,16 +211,6 @@ def role_setup(fixtures, role_uuid):
     )
 
 
-@pytest.fixture
-def role_tasks(db_session):
-    datastore = SQLAlchemySessionAuthStore(
-        db_session, models.Role, models.Permission, models.RolePermissionAssociation,
-        models.ComplexGroupComplexAssociation
-    )
-    # initialize only once the tasks, return a mapping task name: task
-    return {t.name: t for t in _init_role_tasks(datastore)}
-
-
 @pytest.fixture(scope='function')
 def datastore(db_session):
     return SQLAlchemySessionAuthStore(
@@ -232,7 +221,7 @@ def datastore(db_session):
 
 @pytest.fixture
 def celery(celery_app, datastore, db_session):
-    init_ts_auth_tasks(celery_app, db_session, [models.ComplexGroupComplexAssociation], datastore, False)
+    init_ts_auth_tasks(celery_app, datastore)
 
     celery_app.conf.broker_transport_options = {
         'confirm_publish': True,  # optional, not affecting celery hanging when rabbit is unavailable

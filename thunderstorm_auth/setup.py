@@ -1,143 +1,32 @@
 import itertools
 
-from celery import current_app, signals, shared_task
-import kombu
-from statsd.defaults.env import statsd
-
-from thunderstorm_auth.tasks import group_sync_task, permission_sync_task
 from thunderstorm_auth.roles import _init_role_tasks, _role_task_routing_key
+from thunderstorm_auth.groups import _init_group_tasks, _group_task_routing_key
+from thunderstorm_auth.permissions import _init_permission_tasks
 
-EXCHANGE = kombu.Exchange('ts.messaging')
 
-
-def init_ts_auth_tasks(celery_app, db_session, group_models, datastore, ensure_exchange_exists=True):
+def init_ts_auth_tasks(celery_app, datastore):
     """
     Initialize a Celery app with a queue and sync tasks for auth group models and roles.
 
     Args:
         celery_app (Celery): Celery app to register the sync tasks with.
-        db_session (Session): Database session used to sync the model records.
-        group_models (list): The Thunderstorm auth group models to synchronize.
         datastore (AuthStore): a datastore
-        ensure_exchange_exists (bool): Whether to error if exchange does not exist.
     """
-    init_group_sync_tasks(celery_app, db_session, group_models, ensure_exchange_exists=ensure_exchange_exists)
-    _init_group_tasks(datastore)
-    _init_role_tasks(datastore)
-
-
-def init_group_sync_tasks(celery_app, db_session, group_models, ensure_exchange_exists=True):
-    """
-    Initialize a Celery app with a queue and sync tasks for auth group models.
-
-    Creates and registers a sync task for each group association model.
-    Creates a queue for the service to consume these tasks from and binds the
-    queue to the `ts_auth.group` exchange, binding it with the routing keys of
-    the group types of the group association models.
-
-    Args:
-        celery_app (Celery): Celery app to register the sync tasks with.
-        db_session (Session): Database session used to sync the model records.
-        group_models (list): The Thunderstorm auth group models to synchronize.
-        ensure_exchange_exists (bool): Whether to error if exchange does not exist.
-    """
-    _register_task_queue(celery_app, group_models, ensure_exchange_exists)
-    _register_sync_tasks(celery_app, db_session, group_models)
-
-
-def _register_task_queue(celery_app, group_models, ensure_exchange_exists):
-    """Create and register the service's auth group sync queue to the
-    ts_auth.sync exchange.
-
-    Args:
-        celery_app (Celery): The service's `Celery` app instance.
-        group_models (list): List of all the group models the service
-            subscribes to.
-    """
-    # asserts that the exchange exists
-    EXCHANGE.declare(passive=ensure_exchange_exists, channel=celery_app.broker_connection().channel())
-
-    routing_keys = _routing_keys(group_models) + [_role_task_routing_key()]
-    bindings = itertools.chain(_bindings(EXCHANGE, routing_keys), )
-
-    queue = _service_task_queue(celery_app, bindings)
+    messaging_exchange = Exchange('ts.messaging')
+    bindings = (
+        binding(messaging_exchange, routing_key=routing_key)
+        for routing_key in [_group_task_routing_key(), _role_task_routing_key()]
+    )
 
     celery_app.conf.task_queues = celery_app.conf.task_queues or []
-    celery_app.conf.task_queues.append(queue)
 
+    celery_app.conf.task_queues.append(
+        Queue('{}.ts_auth.group'.format(celery_app.main), list(bindings))
+    )
 
-def _service_task_queue(celery_app, bindings):
-    """Create the queue which group sync tasks will be consumed from.
-
-    Args:
-        celery_app (Celery): The service's `Celery` app instance.
-
-    Returns:
-        kombu.Queue: Queue that group sync tasks will be published to.
-    """
-    queue_name = '{}.ts_auth.group'.format(celery_app.main)
-    return kombu.Queue(queue_name, list(bindings))
-
-
-def _register_sync_tasks(celery_app, db_session, group_models):
-    """Create Celery tasks for syncing each group model and register with the
-    Celery app.
-
-    Args:
-        celery_app (Celery): The service's `Celery` app instance.
-        db_session (Session): The service's (scoped) database session
-        group_models (list): List of all the group models the service
-            subscribes to.
-    """
-    for group_model in group_models:
-        sync_task = group_sync_task(group_model, db_session)
-        celery_app.register_task(sync_task)
-
-
-def _routing_keys(group_models):
-    return [group_model.__ts_group_type__.routing_key for group_model in group_models]
-
-
-def _bindings(exchange, routing_keys):
-    return [kombu.binding(exchange, routing_key=routing_key) for routing_key in routing_keys]
-
-
-def _init_group_tasks(datastore):
-    """
-    Create and init shared task for handling groups, no need to register them as they are
-    shared_task
-
-    Creates a task which is not registered with any app. The task should be
-    created and registered to an app using `thunderstorm_auth.setup.init_group_sync_tasks`.
-
-    Args:
-        datastore (AuthDatastore): datastore object from the thunderstorm-auth library
-
-    Returns:
-        list: tasks needed for handling groups
-    """
-
-    @shared_task(name='auth.request_groups_republish')
-    @statsd.timer('tasks.request_group_republish.time')
-    def request_groups_republish():
-        """
-        Request updated groups if none are present in the db
-        """
-        if not datastore.group_associations_exist():
-            current_app.send_task(
-                'complex-group.republish',
-                ({},),
-                exchange='ts.messaging',
-                routing_key='complex-group.republish'
-            )
-
-    return [request_groups_republish]
-
-
-@signals.worker_ready.connect
-def do_ready(sender, **kwargs):
-    if 'ts_auth.permissions.sync' in sender.app.tasks:
-        sender.app.tasks['ts_auth.permissions.sync'].delay()
+    _init_group_tasks(datastore)
+    _init_role_tasks(datastore)
 
 
 def init_permissions(celery_app, db_session, permission_model):
