@@ -41,13 +41,27 @@ e.g. for Flask:
 > pip install thunderstorm-auth-lib[flask]
 ```
 
-# ############################### ## Special installation notes ## ############################### #
-
+# ############################################################## #
+## Special installation notes ##
 * Upgrading from `<v0.5` to `v0.6`: **It is strongly advised to do a 2-step upgrade, first to `v0.5` and after at least 1 hour upgrade to `v0.6`**
 The reason for this is due to the scheduling of roles broadcasting which happens once every *60minutes*, so if you upgrade straight to `v0.6` there is a chance that your application will not function correctly for up to *one hour* (no roles would have been received and each api call would result in a `401 UNAUTHORIZED`). `v.0.5` is backwards compatible (by which we mean it can still use permissions in the token) which is why we recommend upgrading to that first for one hour so that when you move to `v.0.6` the roles will have been cached locally at that point.
   no roles would have been received and each api call would result in a `401 UNAUTHORIZED`, therefore *1h of missing data and not functioning services*
 
 * on version `v0.7.2` index on `complex_uuid` (one each) has been added to improve lookup perfomances, you are advised to generate a migration to take advantage of these. **Pay attention to the fact that this could have some impact on new deployments if the db migration takes too long due to index creation**
+* version `v0.8.0` removes the bypassing on `ts.messaging` exchange, so if you need to get your tests working with tasks the following fixture is reccomended:
+```python
+from kombu import Exchange
+
+
+@pytest.fixture
+def celery_app(app_config, db_session):
+    flask_app = init_app(create_app(app_config))
+
+    exchange = Exchange('ts.messaging')
+    exchange.declare(channel=flask_app.celery.broker_connection().channel())
+
+    yield flask_app.celery
+```
 
 # ################################################################################################ #
 
