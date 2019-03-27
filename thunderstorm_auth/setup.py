@@ -1,7 +1,7 @@
-import itertools
+from kombu import Exchange, Queue, binding
 
 from thunderstorm_auth.roles import _init_role_tasks, _role_task_routing_key
-from thunderstorm_auth.groups import _init_group_tasks, _group_task_routing_key
+from thunderstorm_auth.groups import _init_group_tasks, _complex_group_task_routing_key
 from thunderstorm_auth.permissions import _init_permission_tasks
 
 
@@ -16,7 +16,7 @@ def init_ts_auth_tasks(celery_app, datastore):
     messaging_exchange = Exchange('ts.messaging')
     bindings = (
         binding(messaging_exchange, routing_key=routing_key)
-        for routing_key in [_group_task_routing_key(), _role_task_routing_key()]
+        for routing_key in [_complex_group_task_routing_key(), _role_task_routing_key()]
     )
 
     celery_app.conf.task_queues = celery_app.conf.task_queues or []
@@ -29,7 +29,7 @@ def init_ts_auth_tasks(celery_app, datastore):
     _init_role_tasks(datastore)
 
 
-def init_permissions(celery_app, db_session, permission_model):
+def init_permissions(datastore):
     """
     Initialize a Celery app with the permission syncing task
 
@@ -38,5 +38,4 @@ def init_permissions(celery_app, db_session, permission_model):
         db_session (Session): SQLAlchemy session
         permission_model (Permission): SQLAlchemy declarative permissions model
     """
-    task = permission_sync_task(permission_model, db_session)
-    celery_app.register_task(task)
+    _init_permission_tasks(datastore)
