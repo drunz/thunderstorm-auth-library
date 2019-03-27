@@ -1,65 +1,26 @@
-from unittest import mock
-
-import celery
-import kombu
-import pytest
-from sqlalchemy.ext.declarative import declarative_base
-
-from thunderstorm_auth import group, setup
+from thunderstorm_auth.setup import init_ts_auth_tasks, init_permissions
 
 
-@pytest.fixture
-def group_type():
-    return group.GroupType('foo')
-
-
-@pytest.fixture
-def models(group_type):
-    base = declarative_base()
-    foo_type = group_type
-    return [group.create_group_association_model(foo_type, base)]
-
-
-@pytest.fixture
-def celery_app(group_type):
-    foo_type = group_type
-    app = celery.Celery('example_service')
-    app.broker_connection = mock.Mock()
-    yield app
-    app.tasks.unregister(foo_type.task_name)
-
-
-def test_exchange_name():
-    assert setup.EXCHANGE.name == 'ts.messaging'
-
-
-def test_init_group_sync_tasks(celery_app, models, group_type):
+def test_init_group_sync_tasks(celery_app, datastore):
     # arrange
-    foo_type = group_type
-    db_session = mock.Mock()
-
-    # act
-    setup.init_group_sync_tasks(celery_app, db_session, models)
+    init_ts_auth_tasks(celery_app, datastore)
 
     # assert
-    assert foo_type.task_name in celery_app.tasks
+    assert 'handle_role_data' in celery_app.tasks
+    assert 'auth.request_groups_republish' in celery_app.tasks
+    assert 'auth.request_groups_republish' in celery_app.tasks
+    assert 'thunderstorm_auth.roles.create_role_permission_associations_if_not_exist' in celery_app.tasks
+    assert 'thunderstorm_auth.roles.create_role_if_not_exists' in celery_app.tasks
+    assert 'thunderstorm_auth.groups.add_group_association' in celery_app.tasks
+    assert 'thunderstorm_auth.roles.create_role_permission_association_if_not_exists' in celery_app.tasks
+    assert 'ts_auth.group.complex.sync' in celery_app.tasks
+    assert 'thunderstorm_auth.roles.remove_role_orphan_permission_associations' in celery_app.tasks
+    assert 'thunderstorm_auth.groups.delete_group_association' in celery_app.tasks
 
 
-def test_init_group_sync_queue(celery_app, models, group_type):
+def test_init_permissions(celery_app, datastore):
     # arrange
-    foo_type = group_type
-    db_session = mock.Mock()
-
-    # act
-    setup.init_group_sync_tasks(celery_app, db_session, models)
+    init_permissions(datastore)
 
     # assert
-    queue = celery_app.conf.task_queues[0]
-    assert isinstance(queue, kombu.Queue)
-    assert queue.name == 'example_service.ts_auth.group'
-    assert {
-        (binding.exchange, binding.routing_key)
-        for binding in queue.bindings
-    } == {
-        (setup.EXCHANGE, 'role.data'), (setup.EXCHANGE, foo_type.routing_key)
-    }
+    assert 'ts_auth.permissions.sync' in celery_app.tasks

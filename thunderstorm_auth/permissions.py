@@ -1,12 +1,46 @@
 from collections.abc import Mapping
+import logging
 
+from celery import current_app, signals, shared_task
+from celery.utils.log import get_task_logger
 from sqlalchemy import Column, String, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declared_attr
+from statsd.defaults.env import statsd
 
 from thunderstorm_auth.exceptions import (InsufficientPermissions, BrokenTokenError)
 
+
+logger = get_task_logger(__name__)
+logger.setLevel(logging.INFO)
+
+PERMISSIONS_NEW = 'permissions.new'
+PERMISSIONS_DELETE = 'permissions.delete'
+MESSAGING_EXCHANGE = 'ts.messaging'
 _REGISTERED_PERMISSIONS = set()
+
+
+class PermissionMixin(object):
+    @declared_attr
+    def __tablename__(cls):
+        return 'permission'
+
+    uuid = Column(UUID(as_uuid=True), primary_key=True)
+    service_name = Column(String(255), nullable=False)
+    permission = Column(String(255), nullable=False, unique=True)
+    is_deleted = Column(Boolean(), nullable=False, server_default='false')
+    is_sent = Column(Boolean(), nullable=False, server_default='false')
+
+
+# TODO @shipperizer swap this for the PermissionMixin
+class Permission:
+    __tablename__ = 'permission'
+
+    uuid = Column(UUID(as_uuid=True), primary_key=True)
+    service_name = Column(String(255), nullable=False)
+    permission = Column(String(255), nullable=False, unique=True)
+    is_deleted = Column(Boolean(), nullable=False, server_default='false')
+    is_sent = Column(Boolean(), nullable=False, server_default='false')
 
 
 def validate_permission(token_data, permission, service_name, func_validate):
@@ -115,23 +149,55 @@ def create_permission_model(base):
     )
 
 
-class PermissionMixin(object):
-    @declared_attr
-    def __tablename__(cls):
-        return 'permission'
+def _init_permission_tasks(datastore):
+    """
+    Create and init shared task for handling permissions, no need to register them as they are
+    shared_task
 
-    uuid = Column(UUID(as_uuid=True), primary_key=True)
-    service_name = Column(String(255), nullable=False)
-    permission = Column(String(255), nullable=False, unique=True)
-    is_deleted = Column(Boolean(), nullable=False, server_default='false')
-    is_sent = Column(Boolean(), nullable=False, server_default='false')
+    Creates a task which is not registered with any app. The task should be
+    created and registered to an app using `thunderstorm_auth.setup.init_permissions`.
+
+    Args:
+        datastore (AuthDatastore): datastore object from the thunderstorm-auth library
+
+    Returns:
+        list: tasks needed for handling permissions
+    """
+    @signals.worker_ready.connect
+    def do_ready(sender, **kwargs):
+        if 'ts_auth.permissions.sync' in sender.app.tasks:
+            sender.app.tasks['ts_auth.permissions.sync'].delay()
+
+    @shared_task(name='ts_auth.permissions.sync')
+    @statsd.timer('tasks.handle_sync_permissions.time')
+    def handle_sync_permissions():
+        # TODO @shipperizer move it to an internal function in the datastore
+        permissions = datastore.db_session.query(
+            datastore.permission_model
+        ).filter(
+            datastore.permission_model.is_sent == False
+        )
+
+        for permission in permissions:
+            if permission.is_deleted:
+                logger.info('deleting permission {}'.format(permission.uuid))
+                current_app.send_task(
+                    PERMISSIONS_DELETE,
+                    (permission.uuid, ),
+                    exchange=MESSAGING_EXCHANGE,
+                    routing_key=PERMISSIONS_DELETE,
+                )
+            else:
+                logger.info('adding permission {}'.format(permission.uuid))
+                current_app.send_task(
+                    PERMISSIONS_NEW,
+                    (permission.uuid, permission.service_name, permission.permission),
+                    exchange=MESSAGING_EXCHANGE,
+                    routing_key=PERMISSIONS_NEW,
+                )
+
+            permission.is_sent = True
+            datastore.commit()
 
 
-class Permission:
-    __tablename__ = 'permission'
-
-    uuid = Column(UUID(as_uuid=True), primary_key=True)
-    service_name = Column(String(255), nullable=False)
-    permission = Column(String(255), nullable=False, unique=True)
-    is_deleted = Column(Boolean(), nullable=False, server_default='false')
-    is_sent = Column(Boolean(), nullable=False, server_default='false')
+    return [handle_sync_permissions]

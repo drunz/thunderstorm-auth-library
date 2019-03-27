@@ -53,7 +53,7 @@ class RoleMixin(object):
 
 def _init_role_tasks(datastore):
     """
-    Create and init shared task for handling roles, no need to register thema s they are
+    Create and init shared task for handling roles, no need to register them as they are
     shared_task
 
     Creates a task which is not registered with any app. The task should be
